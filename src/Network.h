@@ -54,6 +54,16 @@ struct Network {
         }
         return (it == gatePool.end()) ? new Gate : *it;
     }
+
+    Wire *accessByWireName(const char *name) {
+        list<Wire *>::iterator it = wirePool.begin();
+        for (; it != wirePool.end(); ++it) {
+            if (!strcmp((*it)->name, name)) {
+                break;
+            }
+        }
+        return (it == wirePool.end()) ? new Wire : *it;
+    }
     void CreateGraph() {
         ////////////////////////////////////////////////////////////////////////
         // SET INPUT
