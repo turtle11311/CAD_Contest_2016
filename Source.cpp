@@ -3,7 +3,6 @@
 #include <iostream>
 #include <sstream>
 #include <stack>
-#include <stdio.h>
 #include <string>
 #include <vector>
 using namespace std;
@@ -45,7 +44,9 @@ string int2str(int);
 void Print(Network);
 // void subPrint( Gate* );
 void PrintPath(vector<stack<Gate *> >);
+// convert a char to integer
 int A2I(char *);
+// c = a ^ b -> Power( a , b ) return c
 int Power(int, int);
 
 int main() {
