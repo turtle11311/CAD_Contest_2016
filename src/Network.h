@@ -35,7 +35,7 @@ struct Gate {
     list<Gate *> fan_in;
     list<Gate *> fan_out;
     list<Gate *>::iterator fan_out_it;
-    Gate() : type(NONE), value(-1), fan_out_it(fan_out.begin()) {}
+    Gate() : type(NONE), value(-1) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
@@ -79,6 +79,10 @@ struct Network {
     list<Gate *> gatePool;
     list<Wire *> wirePool;
     list<list<Gate *> > paths;
+    Network() {
+        start.name = "start";
+        end.name = "end";
+    }
 
     Gate *accessByGateName(const char *name) {
         list<Gate *>::iterator it = gatePool.begin();
@@ -127,6 +131,7 @@ struct Network {
             start.fan_out.push_back(newGate);
             gatePool.push_back(newGate);
         }
+        start.fan_out_it = start.fan_out.begin();
         ////////////////////////////////////////////////////////////////////////
         // SET OUTPUT
         ////////////////////////////////////////////////////////////////////////
@@ -140,7 +145,9 @@ struct Network {
             newGate->fan_out.push_back(&end);
             end.fan_in.push_back(newGate);
             gatePool.push_back(newGate);
+            newGate->fan_out_it = newGate->fan_out.begin();
         }
+        end.fan_out_it = end.fan_out.begin();
         ////////////////////////////////////////////////////////////////////////
         // SET WIRE
         ////////////////////////////////////////////////////////////////////////
@@ -179,6 +186,7 @@ struct Network {
                 gateWiring(input1, nowGate);
                 wirePool.push_back(input1);
             }
+            input1->fan_out_it = input1->fan_out.begin();
 
             if (!strcmp("NOT1", tokens.front())) {
                 nowGate->type = NOT;
@@ -190,6 +198,7 @@ struct Network {
                     gateWiring(nowGate, input2);
                     wirePool.push_back(input2);
                 }
+                nowGate->fan_out_it = nowGate->fan_out.begin();
             } else {
                 nowGate->type = (!strcmp("NOR2", tokens.front())) ? NOR : NAND;
                 if ((input2 = findGateByName(g2))) {
@@ -200,6 +209,8 @@ struct Network {
                     gateWiring(input2, nowGate);
                     wirePool.push_back(input2);
                 }
+                input2->fan_out_it = input2->fan_out.begin();
+
                 std::advance(lp, 2);
                 g3 = *lp;
                 if ((output = findGateByName(g3))) {
@@ -210,29 +221,33 @@ struct Network {
                     gateWiring(nowGate, output);
                     wirePool.push_back(output);
                 }
+                nowGate->fan_out_it = nowGate->fan_out.begin();
             }
-            cout << *nowGate << endl << endl;
         }
 
-        for (list<Wire *>::iterator it = wirePool.begin(); it != wirePool.end();
-             ++it) {
-            delete *it;
-        }
+        // for (list<Wire *>::iterator it = wirePool.begin(); it !=
+        // wirePool.end();
+        //      ++it) {
+        //     delete *it;
+        // }
         delete[] module_exp;
         delete[] outputs_exp;
         delete[] wires_exp;
     }
 
     void Dfs() {
-
         list<Gate *> path;
         path.push_back(&start);
         while (path.size()) {
-            path.push_back(*(path.back()->fan_out_it++));
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
-                if (path.back()->type == OUTPUT)
+                if (path.back()->type == OUTPUT) {
                     paths.push_back(path);
+                    printContainer(path);
+                    cout << endl << endl;
+                }
                 path.pop_back();
+            } else {
+                path.push_back(*(path.back()->fan_out_it++));
             }
         }
     }

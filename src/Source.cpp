@@ -21,6 +21,7 @@ int main(int argc, char const *argv[]) {
     net.outputs_exp = getExpression();
     net.wires_exp = getExpression();
     net.createGraph();
+    net.Dfs();
 
     return 0;
 }
