@@ -15,7 +15,7 @@ using std::endl;
 struct Gate;
 struct Network;
 typedef Gate Wire;
-enum GateType { NONE, NOT, NOR, NAND, INPUT, OUTPUT };
+enum GateType { NONE, NOT, NOR, NAND, WIRE, INPUT, OUTPUT };
 
 template <typename Container>
 void printContainer(Container &container) {
@@ -157,6 +157,7 @@ struct Network {
              ++it) {
             Wire *newWire = new Wire;
             newWire->name = *it;
+            newWire->type = WIRE;
             wirePool.push_back(newWire);
         }
         ////////////////////////////////////////////////////////////////////////
@@ -225,11 +226,14 @@ struct Network {
             }
         }
 
-        // for (list<Wire *>::iterator it = wirePool.begin(); it !=
-        // wirePool.end();
-        //      ++it) {
-        //     delete *it;
-        // }
+        for (list<Gate *>::iterator wire_it = wirePool.begin();
+             wire_it != wirePool.end(); ++wire_it) {
+            (*wire_it)->fan_in.front()->fan_out = (*wire_it)->fan_out;
+        }
+        for (list<Wire *>::iterator it = wirePool.begin(); it != wirePool.end();
+             ++it) {
+            delete *it;
+        }
         delete[] module_exp;
         delete[] outputs_exp;
         delete[] wires_exp;
@@ -240,11 +244,12 @@ struct Network {
         path.push_back(&start);
         while (path.size()) {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
-                if (path.back()->type == OUTPUT) {
+                if (path.back()->name == "end") {
                     paths.push_back(path);
                     printContainer(path);
                     cout << endl << endl;
                 }
+                path.back()->fan_out_it = path.back()->fan_out.begin();
                 path.pop_back();
             } else {
                 path.push_back(*(path.back()->fan_out_it++));
