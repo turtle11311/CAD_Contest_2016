@@ -34,7 +34,8 @@ struct Gate {
     short value;
     list<Gate *> fan_in;
     list<Gate *> fan_out;
-    Gate() : type(NONE), value(-1) {}
+    list<Gate *>::iterator fan_out_it;
+    Gate() : type(NONE), value(-1), fan_out_it(fan_out.begin()) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
@@ -71,11 +72,14 @@ void getTokens(list<char *> &tokens, char *src) {
 }
 
 struct Network {
+
     Gate start;
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
     list<Gate *> gatePool;
     list<Wire *> wirePool;
+    list<list<Gate *> > paths;
+
     Gate *accessByGateName(const char *name) {
         list<Gate *>::iterator it = gatePool.begin();
         for (; it != gatePool.end(); ++it) {
@@ -106,6 +110,7 @@ struct Network {
         output->fan_in.push_back(input);
         input->fan_out.push_back(output);
     }
+
     void createGraph() {
         ////////////////////////////////////////////////////////////////////////
         // SET INPUT
@@ -217,6 +222,21 @@ struct Network {
         delete[] outputs_exp;
         delete[] wires_exp;
     }
+
+    void Dfs() {
+
+        list<Gate *> path;
+        path.push_back(&start);
+        while (path.size()) {
+            path.push_back(*(path.back()->fan_out_it++));
+            if (path.back()->fan_out_it == path.back()->fan_out.end()) {
+                if (path.back()->type == OUTPUT)
+                    paths.push_back(path);
+                path.pop_back();
+            }
+        }
+    }
+
     ~Network() {
         for (list<Gate *>::iterator it = gatePool.begin(); it != gatePool.end();
              ++it) {
