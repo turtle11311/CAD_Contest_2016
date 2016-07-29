@@ -4,7 +4,9 @@
 #include <cstring>
 #include <iostream>
 #include <list>
+#include <map>
 #include <string>
+using std::map;
 using std::list;
 using std::string;
 using std::getline;
@@ -14,7 +16,8 @@ using std::endl;
 
 struct Gate;
 struct Network;
-typedef Gate Wire;
+typedef map<string, Gate *> GateMap;
+typedef list<Gate *> GateList;
 enum GateType { NONE, NOT, NOR, NAND, WIRE, INPUT, OUTPUT };
 
 template <typename Container>
@@ -32,9 +35,9 @@ struct Gate {
     string name;
     GateType type;
     short value;
-    list<Gate *> fan_in;
-    list<Gate *> fan_out;
-    list<Gate *>::iterator fan_out_it;
+    GateList fan_in;
+    GateList fan_out;
+    GateList::iterator fan_out_it;
     Gate() : type(NONE), value(-1) {}
 };
 
@@ -76,37 +79,20 @@ struct Network {
     Gate start;
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
-    list<Gate *> gatePool;
-    list<Wire *> wirePool;
-    list<list<Gate *> > paths;
+    GateMap gatePool;
+    GateMap wirePool;
+    list<GateList> paths;
     Network() {
         start.name = "start";
         end.name = "end";
     }
 
-    Gate *accessByGateName(const char *name) {
-        list<Gate *>::iterator it = gatePool.begin();
-        for (; it != gatePool.end(); ++it) {
-            if (!strcmp((*it)->name.c_str(), name)) {
-                break;
-            }
-        }
-        return (it == gatePool.end()) ? new Gate : *it;
-    }
-
     Gate *findGateByName(const char *name) {
-        for (list<Gate *>::iterator it = gatePool.begin(); it != gatePool.end();
-             ++it) {
-            if (!strcmp(name, (*it)->name.c_str())) {
-                return *it;
-            }
-        }
-        for (list<Gate *>::iterator it = wirePool.begin(); it != wirePool.end();
-             ++it) {
-            if (!strcmp(name, (*it)->name.c_str())) {
-                return *it;
-            }
-        }
+        GateMap::iterator it;
+        if ((it = gatePool.find(name)) != gatePool.end())
+            return it->second;
+        if ((it = wirePool.find(name)) != wirePool.end())
+            return it->second;
         return NULL;
     }
 
@@ -129,7 +115,7 @@ struct Network {
             newGate->type = INPUT;
             newGate->fan_in.push_back(&start);
             start.fan_out.push_back(newGate);
-            gatePool.push_back(newGate);
+            gatePool[newGate->name] = newGate;
         }
         start.fan_out_it = start.fan_out.begin();
         ////////////////////////////////////////////////////////////////////////
@@ -144,7 +130,7 @@ struct Network {
             newGate->type = OUTPUT;
             newGate->fan_out.push_back(&end);
             end.fan_in.push_back(newGate);
-            gatePool.push_back(newGate);
+            gatePool[newGate->name] = newGate;
             newGate->fan_out_it = newGate->fan_out.begin();
         }
         end.fan_out_it = end.fan_out.begin();
@@ -155,10 +141,10 @@ struct Network {
         tokens.pop_front();
         for (list<char *>::iterator it = tokens.begin(); it != tokens.end();
              ++it) {
-            Wire *newWire = new Wire;
+            Gate *newWire = new Gate;
             newWire->name = *it;
             newWire->type = WIRE;
-            wirePool.push_back(newWire);
+            wirePool[newWire->name] = newWire;
         }
         ////////////////////////////////////////////////////////////////////////
         // SET GATE
@@ -171,9 +157,9 @@ struct Network {
             getTokens(tokens, gate_declare);
             list<char *>::iterator lp = tokens.begin();
             nowGate = new Gate;
-            gatePool.push_back(nowGate);
             std::advance(lp, 1);
             nowGate->name = string(*lp);
+            gatePool[nowGate->name] = nowGate;
             std::advance(lp, 2);
             g1 = *lp;
             std::advance(lp, 2);
@@ -185,7 +171,7 @@ struct Network {
                 input1 = new Gate;
                 input1->name = g1;
                 gateWiring(input1, nowGate);
-                wirePool.push_back(input1);
+                wirePool[input1->name] = input1;
             }
             input1->fan_out_it = input1->fan_out.begin();
 
@@ -197,7 +183,7 @@ struct Network {
                     input2 = new Gate;
                     input2->name = g2;
                     gateWiring(nowGate, input2);
-                    wirePool.push_back(input2);
+                    wirePool[input2->name] = input2;
                 }
                 nowGate->fan_out_it = nowGate->fan_out.begin();
             } else {
@@ -208,7 +194,7 @@ struct Network {
                     input2 = new Gate;
                     input2->name = g2;
                     gateWiring(input2, nowGate);
-                    wirePool.push_back(input2);
+                    wirePool[input2->name] = input2;
                 }
                 input2->fan_out_it = input2->fan_out.begin();
 
@@ -220,19 +206,20 @@ struct Network {
                     output = new Gate;
                     output->name = g3;
                     gateWiring(nowGate, output);
-                    wirePool.push_back(output);
+                    wirePool[output->name] = output;
                 }
                 nowGate->fan_out_it = nowGate->fan_out.begin();
             }
         }
 
-        for (list<Gate *>::iterator wire_it = wirePool.begin();
+        for (GateMap::iterator wire_it = wirePool.begin();
              wire_it != wirePool.end(); ++wire_it) {
-            (*wire_it)->fan_in.front()->fan_out = (*wire_it)->fan_out;
+            wire_it->second->fan_in.front()->fan_out = wire_it->second->fan_out;
         }
-        for (list<Wire *>::iterator it = wirePool.begin(); it != wirePool.end();
+
+        for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
              ++it) {
-            delete *it;
+            delete it->second;
         }
         delete[] module_exp;
         delete[] outputs_exp;
@@ -240,7 +227,7 @@ struct Network {
     }
 
     void Dfs() {
-        list<Gate *> path;
+        GateList path;
         path.push_back(&start);
         while (path.size()) {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
@@ -258,9 +245,9 @@ struct Network {
     }
 
     ~Network() {
-        for (list<Gate *>::iterator it = gatePool.begin(); it != gatePool.end();
+        for (GateMap::iterator it = gatePool.begin(); it != gatePool.end();
              ++it) {
-            delete *it;
+            delete it->second;
         }
     }
 };
