@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CXXFLAGS = -g -Wall
+CXXFLAGS = -g -O3 -Wall
 VPATH = src/
 
 cadb090: Source.cpp Network.h

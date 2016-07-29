@@ -233,8 +233,8 @@ struct Network {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
                 if (path.back()->name == "end") {
                     paths.push_back(path);
-                    printContainer(path);
-                    cout << endl << endl;
+                    // printContainer(path);
+                    // cout << endl << endl;
                 }
                 path.back()->fan_out_it = path.back()->fan_out.begin();
                 path.pop_back();
