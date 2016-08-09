@@ -6,6 +6,8 @@
 #include <list>
 #include <map>
 #include <string>
+#include <ctime>
+#include <cstdlib>
 using std::map;
 using std::list;
 using std::string;
@@ -35,10 +37,11 @@ struct Gate {
     string name;
     GateType type;
     short value;
+    int arrival_time;
     GateList fan_in;
     GateList fan_out;
     GateList::iterator fan_out_it;
-    Gate() : type(NONE), value(-1) {}
+    Gate() : type(NONE), value(-1), arrival_time(-1) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
@@ -85,6 +88,7 @@ struct Network {
     Network() {
         start.name = "start";
         end.name = "end";
+	start.arrival_time = 0;
     }
 
     Gate *findGateByName(const char *name) {
@@ -212,15 +216,33 @@ struct Network {
             }
         }
 
-        for (GateMap::iterator wire_it = wirePool.begin();
-             wire_it != wirePool.end(); ++wire_it) {
-            wire_it->second->fan_in.front()->fan_out = wire_it->second->fan_out;
-        }
+        //for (GateMap::iterator wire_it = wirePool.begin();
+        //     wire_it != wirePool.end(); ++wire_it) {
+	//	wire_it->second->fan_in.front()->fan_out.clear();
+	//	for ( GateList::iterator it = wire_it->second->fan_out.begin() ; 
+	//		it != wire_it->second->fan_out.end() ; ++it ){
+	//		wire_it->second->fan_in.front()->fan_out.push_back( *it );
 
-        for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
-             ++it) {
-            delete it->second;
-        }
+	//		if ( (*it)->fan_in.size() == 1 ){
+	//			(*it)->fan_in.pop_back();
+	//			(*it)->fan_in.push_back( wire_it->second->fan_in.front() );
+	//		}
+	//		else if ( (*it)->fan_in.size() == 2 ){
+	//			if ( wire_it->second->fan_in.front() == (*it)->fan_in.front() ){
+	//				(*it)->fan_in.pop_front();
+	//			}
+	//			else{
+	//				(*it)->fan_in.pop_back();
+	//			}
+	//			(*it)->fan_in.push_back( wire_it->second->fan_in.front() );
+	//		}
+
+	//	}
+	//}
+        //for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
+        //     ++it) {
+        //    delete it->second;
+        //}
         delete[] module_exp;
         delete[] outputs_exp;
         delete[] wires_exp;
@@ -239,9 +261,89 @@ struct Network {
                 path.back()->fan_out_it = path.back()->fan_out.begin();
                 path.pop_back();
             } else {
-                path.push_back(*(path.back()->fan_out_it++));
+                	path.push_back(*(path.back()->fan_out_it++));
             }
         }
+    }
+
+    void random2Shrink(){
+	    // random test pattern
+	    /**************************************************************************************/
+	    srand(time(0));
+	    for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it )
+		(*it)->value = rand() % 2;
+	    /**************************************************************************************/
+		
+	    // dfs with the status Q
+	    /**************************************************************************************/
+	    list<GateList> status;
+	    GateList path;
+	    path.push_back(&start);
+	    status.push_back(path);
+	    while( status.size() ){
+		    path.clear();
+		    path = status.front();
+//		    cout << "cur: \n";
+//		    for ( list<GateList>::iterator it = status.begin() ; it != status.end() ; ++it ){
+//		    	printContainer(*it);
+//		    	cout << endl;
+//		    }
+//		    cout << endl;
+		    
+		    bool unready = false;
+		    for ( GateList::iterator it = path.back()->fan_out.begin() ; it != path.back()->fan_out.end() ; ++it ){
+			    if ( (*it)->arrival_time == -1 ){
+//				if ( (*it)->name == "w"  )
+//					cout << "123\n";
+				    int which = isReady(*it);
+			    	if ( which == 1 )
+					(*it)->arrival_time = (*it)->fan_in.front()->arrival_time + 1;
+			    	else if ( which == 2 || which == 0 )
+					(*it)->arrival_time = (*it)->fan_in.back()->arrival_time + 1;
+			    	else {		
+					unready = true;
+					continue;
+			    	}
+			    }
+			    	path.push_back( *it );	    
+		    	    	status.push_back( path );
+			    	path.pop_back();
+			    
+		    }
+		    //if ( unready )
+		//	    status.push_back( status.front() );
+		    status.pop_front();
+	    }
+	    /**************************************************************************************/ 
+    }
+    // 1 = one fanin or fanin1 is first , 2 = fanin2 is first , 0 = arrive at the same time , -1 = unready
+    int isReady( Gate* out ){
+		
+
+	   if ( out->fan_in.size() == 1 )
+		   return 1;
+	   else if ( out->fan_in.size() == 2 ){
+	   	GateList::iterator it1 = out->fan_in.begin();
+		GateList::iterator it2 = ++it1;
+//				if ( out->name == "w" ){
+//					cout << out->fan_in.size() << endl;
+//					printContainer(out->fan_in);
+//					cout << endl;
+//					//				
+////					cout << (*it1)->name << " " << (*it1)->arrival_time << endl;
+////					cout << (*it2)->name << " " << (*it2)->arrival_time << endl;
+//				
+//				}
+		if ( (*it1)->arrival_time != -1 && (*it2)->arrival_time != -1 ){
+			if ( (*it1)->arrival_time > (*it2)->arrival_time ) 
+				return 1;
+			else if ( (*it1)->arrival_time == (*it2)->arrival_time )
+				return 0;
+			else 
+				return 2;
+		} 
+	   }
+	   return -1;
     }
 
     ~Network() {
