@@ -177,7 +177,6 @@ struct Network {
                 gateWiring(input1, nowGate);
                 wirePool[input1->name] = input1;
             }
-            input1->fan_out_it = input1->fan_out.begin();
 
             if (!strcmp("NOT1", tokens.front())) {
                 nowGate->type = NOT;
@@ -189,7 +188,6 @@ struct Network {
                     gateWiring(nowGate, input2);
                     wirePool[input2->name] = input2;
                 }
-                nowGate->fan_out_it = nowGate->fan_out.begin();
             } else {
                 nowGate->type = (!strcmp("NOR2", tokens.front())) ? NOR : NAND;
                 if ((input2 = findGateByName(g2))) {
@@ -200,7 +198,6 @@ struct Network {
                     gateWiring(input2, nowGate);
                     wirePool[input2->name] = input2;
                 }
-                input2->fan_out_it = input2->fan_out.begin();
 
                 std::advance(lp, 2);
                 g3 = *lp;
@@ -212,37 +209,33 @@ struct Network {
                     gateWiring(nowGate, output);
                     wirePool[output->name] = output;
                 }
-                nowGate->fan_out_it = nowGate->fan_out.begin();
             }
         }
 
-        //for (GateMap::iterator wire_it = wirePool.begin();
-        //     wire_it != wirePool.end(); ++wire_it) {
-	//	wire_it->second->fan_in.front()->fan_out.clear();
-	//	for ( GateList::iterator it = wire_it->second->fan_out.begin() ; 
-	//		it != wire_it->second->fan_out.end() ; ++it ){
-	//		wire_it->second->fan_in.front()->fan_out.push_back( *it );
+        // rewiring
+        for ( GateMap::iterator it = wirePool.begin() ; it != wirePool.end() ; ++it ){
+            it->second->fan_in.front()->fan_out = it->second->fan_out;
+            for ( GateList::iterator wire_out_it = it->second->fan_out.begin() ;
+                    wire_out_it != it->second->fan_out.end() ; ++wire_out_it ){
+                for( GateList::iterator wire_out_in_it = (*wire_out_it)->fan_in.begin();
+                        wire_out_in_it != (*wire_out_it)->fan_in.end() ; ++wire_out_in_it ){
+                    if ( it->second == (*wire_out_in_it) ){
+                        (*wire_out_in_it) = it->second->fan_in.front();
+                    }   
+                }              
+            }
+        }
+        
+        // release wires memory
+        for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
+             ++it) {
+            delete it->second;
+        }
 
-	//		if ( (*it)->fan_in.size() == 1 ){
-	//			(*it)->fan_in.pop_back();
-	//			(*it)->fan_in.push_back( wire_it->second->fan_in.front() );
-	//		}
-	//		else if ( (*it)->fan_in.size() == 2 ){
-	//			if ( wire_it->second->fan_in.front() == (*it)->fan_in.front() ){
-	//				(*it)->fan_in.pop_front();
-	//			}
-	//			else{
-	//				(*it)->fan_in.pop_back();
-	//			}
-	//			(*it)->fan_in.push_back( wire_it->second->fan_in.front() );
-	//		}
-
-	//	}
-	//}
-        //for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
-        //     ++it) {
-        //    delete it->second;
-        //}
+        // reset the fan_out_it, after the original iterator is never effect
+        for ( GateMap::iterator it = gatePool.begin() ; it != gatePool.end(); ++it ){
+            it->second->fan_out_it = it->second->fan_out.begin();
+        }
         delete[] module_exp;
         delete[] outputs_exp;
         delete[] wires_exp;

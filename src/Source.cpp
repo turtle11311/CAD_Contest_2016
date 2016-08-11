@@ -21,7 +21,7 @@ int main(int argc, char const *argv[]) {
     net.outputs_exp = getExpression();
     net.wires_exp = getExpression();
     net.createGraph();
- //   net.Dfs();
+    net.Dfs();
     //net.random2Shrink();
 
     //for ( GateMap::iterator it = net.gatePool.begin() ; it != net.gatePool.end() ; ++it ){
@@ -35,6 +35,6 @@ int main(int argc, char const *argv[]) {
     //        printContainer(it->second->fan_out);
     //        cout << endl;
 
-    //}    
+    //1}    
     return 0;
 }
