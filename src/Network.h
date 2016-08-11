@@ -16,7 +16,6 @@ using std::cin;
 using std::cout;
 using std::endl;
 
-
 struct Gate;
 struct Network;
 typedef map<string, Gate *> GateMap;
