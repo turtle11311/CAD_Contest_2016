@@ -15,7 +15,6 @@ using std::getline;
 using std::cin;
 using std::cout;
 using std::endl;
-//
 struct Gate;
 struct Network;
 typedef map<string, Gate *> GateMap;
@@ -260,85 +259,63 @@ struct Network {
     }
 
     void random2Shrink(){
-	    // random test pattern
-	    /**************************************************************************************/
-	    srand(time(0));
-	    for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it )
-		(*it)->value = rand() % 2;
-	    /**************************************************************************************/
 		
 	    // dfs with the status Q
 	    /**************************************************************************************/
-	    list<GateList> status;
-	    GateList path;
-	    path.push_back(&start);
-	    status.push_back(path);
-	    while( status.size() ){
-		    path.clear();
-		    path = status.front();
-//		    cout << "cur: \n";
-//		    for ( list<GateList>::iterator it = status.begin() ; it != status.end() ; ++it ){
-//		    	printContainer(*it);
-//		    	cout << endl;
-//		    }
-//		    cout << endl;
-		    
-		    bool unready = false;
-		    for ( GateList::iterator it = path.back()->fan_out.begin() ; it != path.back()->fan_out.end() ; ++it ){
-			    if ( (*it)->arrival_time == -1 ){
-//				if ( (*it)->name == "w"  )
-//					cout << "123\n";
-				    int which = isReady(*it);
-			    	if ( which == 1 )
-					(*it)->arrival_time = (*it)->fan_in.front()->arrival_time + 1;
-			    	else if ( which == 2 || which == 0 )
-					(*it)->arrival_time = (*it)->fan_in.back()->arrival_time + 1;
-			    	else {		
-					unready = true;
-					continue;
-			    	}
-			    }
-			    	path.push_back( *it );	    
-		    	    	status.push_back( path );
-			    	path.pop_back();
-			    
-		    }
-		    //if ( unready )
-		//	    status.push_back( status.front() );
-		    status.pop_front();
-	    }
 	    /**************************************************************************************/ 
     }
-    // 1 = one fanin or fanin1 is first , 2 = fanin2 is first , 0 = arrive at the same time , -1 = unready
-    int isReady( Gate* out ){
-		
 
-	   if ( out->fan_in.size() == 1 )
-		   return 1;
-	   else if ( out->fan_in.size() == 2 ){
-	   	GateList::iterator it1 = out->fan_in.begin();
-		GateList::iterator it2 = ++it1;
-//				if ( out->name == "w" ){
-//					cout << out->fan_in.size() << endl;
-//					printContainer(out->fan_in);
-//					cout << endl;
-//					//				
-////					cout << (*it1)->name << " " << (*it1)->arrival_time << endl;
-////					cout << (*it2)->name << " " << (*it2)->arrival_time << endl;
-//				
-//				}
-		if ( (*it1)->arrival_time != -1 && (*it2)->arrival_time != -1 ){
-			if ( (*it1)->arrival_time > (*it2)->arrival_time ) 
-				return 1;
-			else if ( (*it1)->arrival_time == (*it2)->arrival_time )
-				return 0;
-			else 
-				return 2;
-		} 
-	   }
-	   return -1;
+    // evaluate each gate's arrival time 
+    void evalArrivalTime(){
+        
+        GateList Q;
+        GateList::iterator waiting_begin = start.fan_out.begin();
+        GateList::iterator waiting_end = start.fan_out.end();
+        start.arrival_time = 0;
+        Q.push_back( &start );
+        while( Q.size() ){
+            
+            for ( GateList::iterator it = waiting_begin;
+                    it != waiting_end ; ++it ){
+                if ( (*it)->arrival_time == -1 )
+                    Q.push_back((*it));
+            }
+            if ( Q.front()->arrival_time == -1 ){
+                Gate* temp = isReady(Q.front());
+                if ( temp ){
+                    Q.front()->arrival_time = temp->arrival_time+1;
+                    waiting_begin = Q.front()->fan_out.begin();
+                    waiting_end = Q.front()->fan_out.end();
+                }
+                else
+                    Q.push_back(Q.front());
+            }
+            Q.pop_front();
+        }
     }
 
+    // random test pattern
+    void randomInput(){
+    
+	/**************************************************************************************/
+	srand(time(0));
+	for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it )
+	    (*it)->value = rand() % 2;
+	/**************************************************************************************/   
+    }
+   
+    // return the last arrival fan_in, if anyone is unready return NULL
+    Gate* isReady( Gate* out ){
+	Gate* temp = out->fan_in.front();	
+        for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
+            if ( (*it)->arrival_time == -1 )
+                return NULL;
+            if ( temp->arrival_time < (*it)->arrival_time )
+                temp = (*it);
+        }    
+	return temp;
+    }
+    
     ~Network() {
         for (GateMap::iterator it = gatePool.begin(); it != gatePool.end();
              ++it) {
