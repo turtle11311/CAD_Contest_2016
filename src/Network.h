@@ -41,6 +41,16 @@ struct Gate {
     GateList fan_out;
     GateList::iterator fan_out_it;
     Gate() : type(NONE), value(-1), arrival_time(-1) {}
+    void eval(){
+        if ( type == NOT )
+            value = !value;
+        else if ( type == NAND )
+            value = !(fan_in.front()->value&&fan_in.back()->value);
+        else if ( type == NOR )
+            value = !(fan_in.front()->value||fan_in.back()->value);
+        else if ( type == OUTPUT )
+            value = fan_in.front()->value;
+    }
 };
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
@@ -87,7 +97,6 @@ struct Network {
     Network() {
         start.name = "start";
         end.name = "end";
-	start.arrival_time = 0;
     }
 
     Gate *findGateByName(const char *name) {
@@ -253,21 +262,32 @@ struct Network {
                 path.back()->fan_out_it = path.back()->fan_out.begin();
                 path.pop_back();
             } else {
-                	path.push_back(*(path.back()->fan_out_it++));
+                path.push_back(*(path.back()->fan_out_it++));
             }
         }
     }
 
-    void random2Shrink(){
-		
-	    // dfs with the status Q
-	    /**************************************************************************************/
-	    /**************************************************************************************/ 
+    void random2Shrink(){    
+        /**************************************************************************************/
+        randomInput();
+        evalNetworkValue();
+        /**************************************************************************************/ 
     }
-
+    
+    // return the last arrival fan_in, if anyone is unready return NULL
+    Gate* isReady( Gate* out ){
+	Gate* temp = out->fan_in.front();	
+        for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
+            if ( (*it)->arrival_time == -1 )
+                return NULL;
+            if ( temp->arrival_time < (*it)->arrival_time )
+                temp = (*it);
+        }    
+	return temp;
+    }
+    
     // evaluate each gate's arrival time 
-    void evalArrivalTime(){
-        
+    void evalArrivalTime(){ 
         GateList Q;
         GateList::iterator waiting_begin = start.fan_out.begin();
         GateList::iterator waiting_end = start.fan_out.end();
@@ -294,26 +314,58 @@ struct Network {
         }
     }
 
+    // support the evalNetworkValue function
+    bool isReady2Eval( Gate* out ){
+     
+        for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
+            if ( (*it)->value == -1 )
+                return false;
+        }    
+	return true;
+    }
+    
+    // evaluate each gate's value
+    void evalNetworkValue(){
+        GateList Q;
+        for ( GateList::iterator it = start.fan_out.begin();
+                it != start.fan_out.end() ; ++it )
+            Q.push_back((*it));
+        while( Q.size() ){
+            for ( GateList::iterator it = Q.front()->fan_out.begin() ; 
+                    it != Q.front()->fan_out.end() ; ++it ){
+                bool canEval = isReady2Eval( (*it) );           
+                if ( canEval ){
+                    (*it)->eval();
+                    if ( (*it) != &end )
+                        Q.push_back((*it));
+                }
+                else{
+                    Q.push_back( Q.front() );
+                    break;
+                }
+            }
+            Q.pop_front();
+        }
+    }
+
     // random test pattern
     void randomInput(){
-    
 	/**************************************************************************************/
 	srand(time(0));
-	for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it )
+        cout << "the random pattern: " << endl;
+	for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it ){
 	    (*it)->value = rand() % 2;
+            cout << (*it)->value << " ";
+        }
+        cout << endl;
 	/**************************************************************************************/   
     }
    
-    // return the last arrival fan_in, if anyone is unready return NULL
-    Gate* isReady( Gate* out ){
-	Gate* temp = out->fan_in.front();	
-        for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
-            if ( (*it)->arrival_time == -1 )
-                return NULL;
-            if ( temp->arrival_time < (*it)->arrival_time )
-                temp = (*it);
-        }    
-	return temp;
+    // reset each gate's value
+    void clearNetworkValue(){
+        for(GateMap::iterator it = gatePool.begin(); it != gatePool.end() ; ++it ){
+            it->second->value = -1;
+        }
     }
     
     ~Network() {
