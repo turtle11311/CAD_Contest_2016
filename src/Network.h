@@ -8,6 +8,7 @@
 #include <string>
 #include <ctime>
 #include <cstdlib>
+#include <vector>
 using std::map;
 using std::list;
 using std::string;
@@ -15,6 +16,7 @@ using std::getline;
 using std::cin;
 using std::cout;
 using std::endl;
+using std::vector;
 struct Gate;
 struct Network;
 typedef map<string, Gate *> GateMap;
@@ -43,7 +45,7 @@ struct Gate {
     Gate() : type(NONE), value(-1), arrival_time(-1) {}
     void eval(){
         if ( type == NOT )
-            value = !value;
+            value = !fan_in.front()->value;
         else if ( type == NAND )
             value = !(fan_in.front()->value&&fan_in.back()->value);
         else if ( type == NOR )
@@ -140,7 +142,6 @@ struct Network {
             Gate *newGate = new Gate;
             newGate->name = *it;
             newGate->type = OUTPUT;
-            newGate->fan_out.push_back(&end);
             end.fan_in.push_back(newGate);
             gatePool[newGate->name] = newGate;
             newGate->fan_out_it = newGate->fan_out.begin();
@@ -249,13 +250,16 @@ struct Network {
         delete[] wires_exp;
     }
 
-    void Dfs() {
+    void Dfs( unsigned int constratint , unsigned int slack ) {
+        unsigned int minimun = constratint - slack;
         GateList path;
         path.push_back(&start);
         while (path.size()) {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
-                if (path.back()->name == "end") {
-                    paths.push_back(path);
+                if (path.back()->type == OUTPUT ) {
+                    if ( path.size() >= minimun )
+                        paths.push_back(path);
+                    
                     // printContainer(path);
                     // cout << endl << endl;
                 }
@@ -265,13 +269,164 @@ struct Network {
                 path.push_back(*(path.back()->fan_out_it++));
             }
         }
+        cout << paths.size() << endl;
     }
 
     void random2Shrink(){    
         /**************************************************************************************/
         randomInput();
         evalNetworkValue();
+        findTruePath();
         /**************************************************************************************/ 
+    }
+    
+    // pattern + 1
+    void addOne( vector<int>& pattern ){
+        pattern[0]++;
+        for ( int i = 0 ; i < pattern.size()-1 ; i ++ ){
+            if ( pattern[i] == 2 ){
+                pattern[i] = 0;
+                pattern[i+1]++;
+            }
+            else 
+                break;
+        }
+    }
+    // just for test pattern 1 1 1 1
+    void forTest(){
+        
+        for ( GateList::iterator it = start.fan_out.begin() ; 
+                it != start.fan_out.end() ; ++it ){
+            (*it)->value = 1;
+        }
+        
+        evalNetworkValue();
+        findTruePath();
+    
+    }
+
+    void force(){
+        
+        vector<int> pattern;
+        pattern.resize( start.fan_out.size() );
+        int times = 1;
+        for ( int i = 0 ; i < pattern.size() ; i ++ ){
+            pattern[i] = 0;
+            times *= 2;
+        }
+
+        for ( int i = 0 ; i < times ; i ++ ){
+            for ( int j = 0 ; j < pattern.size() ; j ++ )
+                cout << pattern[j] << " ";
+            cout <<endl;
+            addOne(pattern); 
+            int index = 0;
+            for ( GateList::iterator it = start.fan_out.begin();
+                    it != start.fan_out.end();++it){
+                (*it)->value = pattern[index++];    
+            }
+            evalNetworkValue();        
+            findTruePath();
+            clearNetworkValue();
+        }
+    }
+
+    void findTruePath(){
+        for ( list<GateList>::iterator paths_it = paths.begin() ;
+                paths_it != paths.end() ; ++paths_it ){
+            //printContainer((*paths_it));
+            //cout << endl;
+            bool isTruePath = true;
+            Gate* me = (*paths_it).front(); 
+            for ( GateList::iterator path_it = (*paths_it).begin() 
+                    ; path_it != (*paths_it).end() ; ++path_it ){
+                Gate* you;
+                if ( (*path_it)->type == NAND ){
+                    you = ( me == (*path_it)->fan_in.front() )? 
+                        (*path_it)->fan_in.back() : (*path_it)->fan_in.front();
+                    isTruePath = subFindTruePath( (*path_it)->type , me , you );
+                }
+                else if ( (*path_it)->type == NOR ){
+                    you = ( me == (*path_it)->fan_in.front() )? 
+                        (*path_it)->fan_in.back() : (*path_it)->fan_in.front();
+                    isTruePath = subFindTruePath( (*path_it)->type , me , you );
+                }
+                if ( !isTruePath )
+                    break;
+                me = (*path_it);                          
+            }
+            if ( isTruePath ){
+                printContainer(*paths_it);
+                cout << endl;
+            }
+        }
+    }    
+
+    // test to print  all the gate value
+    void test2PrintGateValue(){
+
+        cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
+        cout << "gate name: ";
+        for ( GateMap::iterator it = gatePool.begin();
+                it != gatePool.end() ; ++it ){
+                cout << it->first << "(" << it->second->value << ")" << endl << "~~~~" << endl;
+                
+                    cout << "gate fan_in: ";
+                    for ( GateList::iterator fi_it = it->second->fan_in.begin() ; 
+                            fi_it != it->second->fan_in.end() ; ++fi_it ){
+                        cout << (*fi_it)->name << "(" << (*fi_it)->value << "), ";
+                    }
+                    cout << endl;
+        }
+        cout << "~~~~~~~~~~~~~~~~~~~~~~\n"; 
+    }
+
+    bool subFindTruePath( GateType type , Gate* me , Gate* you ){
+        
+        bool isTruePath = true;
+        if ( type == NAND ){
+            if ( me->arrival_time != you->arrival_time){
+                if ( me->arrival_time > you->arrival_time ){
+                    if ( you->value == 0 ){
+                        isTruePath = false;
+                    }
+                }
+                else{
+                    if ( me->value == 1 ){
+                        isTruePath = false;
+                    }
+                }
+            }
+            else{
+                if ( me->value != you->value ){
+                    if ( me->value == 1 && you->value == 0 ){
+                        isTruePath = false;
+                    }
+                }
+            }
+        }
+        else if ( type == NOR ){
+            if ( me->arrival_time != you->arrival_time){
+                if ( me->arrival_time > you->arrival_time ){
+                    if ( you->value == 1 ){
+                        isTruePath = false;
+                    }
+                }
+                else{
+                    if ( me->value == 0 ){
+                        isTruePath = false;
+                    }
+                }
+            }
+            else{
+                if ( me->value != you->value ){
+                    if ( me->value == 0 && you->value == 1 ){
+                        isTruePath = false;
+                    }
+                }
+            }
+        }
+        return isTruePath;
     }
     
     // return the last arrival fan_in, if anyone is unready return NULL
@@ -289,23 +444,22 @@ struct Network {
     // evaluate each gate's arrival time 
     void evalArrivalTime(){ 
         GateList Q;
-        GateList::iterator waiting_begin = start.fan_out.begin();
-        GateList::iterator waiting_end = start.fan_out.end();
         start.arrival_time = 0;
-        Q.push_back( &start );
+        for ( GateList::iterator it = start.fan_out.begin();
+                it != start.fan_out.end() ; ++it ){
+            Q.push_back((*it));
+        }
         while( Q.size() ){
-            
-            for ( GateList::iterator it = waiting_begin;
-                    it != waiting_end ; ++it ){
-                if ( (*it)->arrival_time == -1 )
-                    Q.push_back((*it));
-            }
+            //printContainer(Q);
+            //cout << endl << endl;
             if ( Q.front()->arrival_time == -1 ){
                 Gate* temp = isReady(Q.front());
                 if ( temp ){
                     Q.front()->arrival_time = temp->arrival_time+1;
-                    waiting_begin = Q.front()->fan_out.begin();
-                    waiting_end = Q.front()->fan_out.end();
+                    for ( GateList::iterator it = Q.front()->fan_out.begin();
+                        it != Q.front()->fan_out.end() ; ++it ){            
+                        Q.push_back((*it));
+                    }
                 }
                 else
                     Q.push_back(Q.front());
@@ -328,24 +482,26 @@ struct Network {
     void evalNetworkValue(){
         GateList Q;
         for ( GateList::iterator it = start.fan_out.begin();
-                it != start.fan_out.end() ; ++it )
+                it != start.fan_out.end() ; ++it ){
             Q.push_back((*it));
+        }
+        start.value = 0;
         while( Q.size() ){
-            for ( GateList::iterator it = Q.front()->fan_out.begin() ; 
-                    it != Q.front()->fan_out.end() ; ++it ){
-                bool canEval = isReady2Eval( (*it) );           
-                if ( canEval ){
-                    (*it)->eval();
-                    if ( (*it) != &end )
+            //printContainer(Q);
+            //cout << endl << endl;
+            if ( isReady2Eval(Q.front()) ){
+                Q.front()->eval();
+                for ( GateList::iterator it = Q.front()->fan_out.begin();
+                    it != Q.front()->fan_out.end() ; ++it ){            
+                    if ( (*it)->value == -1 )
                         Q.push_back((*it));
                 }
-                else{
-                    Q.push_back( Q.front() );
-                    break;
-                }
             }
+            else
+                Q.push_back(Q.front());   
             Q.pop_front();
         }
+        test2PrintGateValue();
     }
 
     // random test pattern
