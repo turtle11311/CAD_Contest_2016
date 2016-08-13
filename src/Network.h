@@ -257,11 +257,8 @@ struct Network {
         while (path.size()) {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
                 if (path.back()->type == OUTPUT ) {
-                    if ( path.size() >= minimun )
+                    if ( path.size() - 3 >= minimun )
                         paths.push_back(path);
-                    
-                    // printContainer(path);
-                    // cout << endl << endl;
                 }
                 path.back()->fan_out_it = path.back()->fan_out.begin();
                 path.pop_back();
@@ -273,11 +270,9 @@ struct Network {
     }
 
     void random2Shrink(){    
-        /**************************************************************************************/
         randomInput();
         evalNetworkValue();
         findTruePath();
-        /**************************************************************************************/ 
     }
     
     // pattern + 1
@@ -293,20 +288,21 @@ struct Network {
         }
     }
     // just for test pattern 1 1 1 1
-    void forTest(){
-        
-        for ( GateList::iterator it = start.fan_out.begin() ; 
-                it != start.fan_out.end() ; ++it ){
+    void forTest() {
+        GateList::iterator it = start.fan_out.begin();
+        for ( ;it != start.fan_out.end() ; ++it ){
             (*it)->value = 1;
         }
-        
+        it = start.fan_out.begin();
+        std::advance(it, 3);
+        (*it)->value = 0;
         evalNetworkValue();
+        test2PrintGateValue();
         findTruePath();
-    
+        clearNetworkValue();
     }
 
     void force(){
-        
         vector<int> pattern;
         pattern.resize( start.fan_out.size() );
         int times = 1;
@@ -316,39 +312,49 @@ struct Network {
         }
 
         for ( int i = 0 ; i < times ; i ++ ){
-            for ( int j = 0 ; j < pattern.size() ; j ++ )
-                cout << pattern[j] << " ";
-            cout <<endl;
-            addOne(pattern); 
+            for ( vector<int>::iterator pattern_it = pattern.begin();
+                  pattern_it != pattern.end(); ++pattern_it)
+                cout << *pattern_it << " ";
+            cout << endl;
             int index = 0;
             for ( GateList::iterator it = start.fan_out.begin();
                     it != start.fan_out.end();++it){
                 (*it)->value = pattern[index++];    
             }
             evalNetworkValue();        
+            test2PrintGateValue();
             findTruePath();
             clearNetworkValue();
+            addOne(pattern); 
         }
     }
 
     void findTruePath(){
         for ( list<GateList>::iterator paths_it = paths.begin() ;
                 paths_it != paths.end() ; ++paths_it ){
-            //printContainer((*paths_it));
-            //cout << endl;
             bool isTruePath = true;
             Gate* me = (*paths_it).front(); 
             for ( GateList::iterator path_it = (*paths_it).begin() 
                     ; path_it != (*paths_it).end() ; ++path_it ){
                 Gate* you;
                 if ( (*path_it)->type == NAND ){
-                    you = ( me == (*path_it)->fan_in.front() )? 
-                        (*path_it)->fan_in.back() : (*path_it)->fan_in.front();
+                    if ( me == (*path_it)->fan_in.front() ){
+                        you =  (*path_it)->fan_in.back(); 
+                    }
+                    else{
+                        you = (*path_it)->fan_in.front(); 
+                        me = (*path_it)->fan_in.back();
+                    }
                     isTruePath = subFindTruePath( (*path_it)->type , me , you );
                 }
                 else if ( (*path_it)->type == NOR ){
-                    you = ( me == (*path_it)->fan_in.front() )? 
-                        (*path_it)->fan_in.back() : (*path_it)->fan_in.front();
+                    if ( me == (*path_it)->fan_in.front() ){
+                        you =  (*path_it)->fan_in.back(); 
+                    }
+                    else{
+                        you = (*path_it)->fan_in.front(); 
+                        me = (*path_it)->fan_in.back();
+                    }
                     isTruePath = subFindTruePath( (*path_it)->type , me , you );
                 }
                 if ( !isTruePath )
@@ -501,7 +507,6 @@ struct Network {
                 Q.push_back(Q.front());   
             Q.pop_front();
         }
-        test2PrintGateValue();
     }
 
     // random test pattern
