@@ -1,0 +1,20 @@
+/////////////////////////////////////////////////////////////
+// Created by: Synopsys DC Expert(TM) in wire load mode
+// Version   : K-2015.06-SP3
+// Date      : Thu Mar 24 08:56:02 2016
+/////////////////////////////////////////////////////////////
+
+
+module case6 ( a, b, c, d, k, j );
+  input a, b, c, d;
+  output k, j, y;
+  wire w2, w3, w4, w5;
+
+  NAND2 e ( .A(a), .B(b), .Y(w2) );
+  NOT1 i ( .A(c), .Y(w3) );
+  NOR2 f ( .A(c), .B(d), .Y(w4) );
+  NOT1 g ( .A(a), .Y(w5) );
+  NAND2 w ( .A(w5), .B(w2), .Y(k) );
+  NOR2 z ( .A(w3), .B(w4), .Y(j) );
+  NOT1 h ( .A(w5) , .Y(y) );
+endmodule
