@@ -42,7 +42,8 @@ struct Gate {
     GateList fan_in;
     GateList fan_out;
     GateList::iterator fan_out_it;
-    Gate() : type(NONE), value(-1), arrival_time(-1) {}
+    bool hasTrav;
+    Gate() : type(NONE), value(-1), arrival_time(-1), hasTrav(false) {}
     void eval(){
         if ( type == NOT )
             value = !fan_in.front()->value;
@@ -89,12 +90,12 @@ void getTokens(list<char *> &tokens, char *src) {
 }
 
 struct Network {
-
     Gate start;
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
     GateMap gatePool;
     GateMap wirePool;
+    GateList evalSequence;
     list<GateList> paths;
     Network() {
         start.name = "start";
@@ -266,7 +267,24 @@ struct Network {
                 path.push_back(*(path.back()->fan_out_it++));
             }
         }
-        cout << paths.size() << endl;
+    }
+    void topologySort() {
+        GateList stack;
+        stack.push_back(&start);
+        start.hasTrav = true;
+        while (stack.size()) {
+            if (stack.back()->fan_out_it == stack.back()->fan_out.end()) {
+                evalSequence.push_front(stack.back());
+                stack.pop_back();
+            } else {
+                if(!(*stack.back()->fan_out_it)->hasTrav) {
+                    stack.push_back(*(stack.back()->fan_out_it++));
+                    stack.back()->hasTrav = true;
+                } else {
+                    ++stack.back()->fan_out_it;
+                }
+            }
+        }
     }
 
     void random2Shrink(){
@@ -330,12 +348,14 @@ struct Network {
     }
 
     void findTruePath(){
-        for ( list<GateList>::iterator paths_it = paths.begin() ;
-                paths_it != paths.end() ; ++paths_it ){
+        for (list<GateList>::iterator paths_it = paths.begin();
+                paths_it != paths.end(); ++paths_it )
+        {
             bool isTruePath = true;
             Gate* me = (*paths_it).front();
-            for ( GateList::iterator path_it = (*paths_it).begin();
-                    ; path_it != (*paths_it).end() ; ++path_it ){
+            for (GateList::iterator path_it = paths_it->begin()
+                ; path_it != paths_it->end(); ++path_it )
+            {
                 Gate* you;
                 if ( (*path_it)->type == NAND ){
                     if ( me == (*path_it)->fan_in.front() ){
@@ -456,8 +476,6 @@ struct Network {
             Q.push_back((*it));
         }
         while( Q.size() ){
-            //printContainer(Q);
-            //cout << endl << endl;
             if ( Q.front()->arrival_time == -1 ){
                 Gate* temp = isReady(Q.front());
                 if ( temp ){
