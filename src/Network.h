@@ -275,6 +275,8 @@ struct Network {
         while (stack.size()) {
             if (stack.back()->fan_out_it == stack.back()->fan_out.end()) {
                 evalSequence.push_front(stack.back());
+                if(evalSequence.front()->type == INPUT)
+                    evalSequence.pop_front();
                 stack.pop_back();
             } else {
                 if(!(*stack.back()->fan_out_it)->hasTrav) {
@@ -504,27 +506,6 @@ struct Network {
 
     // evaluate each gate's value
     void evalNetworkValue(){
-        GateList Q;
-        for ( GateList::iterator it = start.fan_out.begin();
-                it != start.fan_out.end() ; ++it ){
-            Q.push_back((*it));
-        }
-        start.value = 0;
-        while( Q.size() ){
-            //printContainer(Q);
-            //cout << endl << endl;
-            if ( isReady2Eval(Q.front()) ){
-                Q.front()->eval();
-                for ( GateList::iterator it = Q.front()->fan_out.begin();
-                    it != Q.front()->fan_out.end() ; ++it ){
-                    if ( (*it)->value == -1 )
-                        Q.push_back((*it));
-                }
-            }
-            else
-                Q.push_back(Q.front());
-            Q.pop_front();
-        }
     }
 
     // random test pattern
