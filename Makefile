@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CXXFLAGS = -O3 -Wall 
+CXXFLAGS = -O3 -Wall
 VPATH = src/
 TARGET = cadb090
 
@@ -20,7 +20,7 @@ run_case3: $(TARGET)
 	./$(TARGET) 31 6 < test_cases/case3
 
 run_case4: $(TARGET)
-	./$(TARGET) 45 6 < test_cases/case3
+	./$(TARGET) 45 6 < test_cases/case4
 
 run_case5: $(TARGET)
-	./$(TARGET) 47 10 < test_cases/case3
+	./$(TARGET) 47 10 < test_cases/case5
