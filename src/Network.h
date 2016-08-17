@@ -287,6 +287,7 @@ struct Network {
                 }
             }
         }
+        stack.pop_front();
     }
 
     void random2Shrink(){
