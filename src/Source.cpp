@@ -2,6 +2,7 @@
 #include "Network.h"
 #include <cstring>
 #include <iostream>
+#include <cstdlib>
 #include <list>
 #include <string>
 using namespace std;
@@ -11,6 +12,13 @@ Network net;
 int main(int argc, char const *argv[]) {
     string line;
     list<char *> tokens;
+    int timing, slack;
+    if (argc < 3) {
+        cerr << "Usage: " << argv[0] << "Timing Slack" << endl;
+        exit(EXIT_FAILURE);
+    }
+    timing = atoi(argv[1]);
+    slack = atoi(argv[2]);
     // clear heading comment
     do {
         getline(cin, line);

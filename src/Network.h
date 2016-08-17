@@ -250,8 +250,8 @@ struct Network {
         delete[] wires_exp;
     }
 
-    void Dfs( unsigned int constratint , unsigned int slack ) {
-        unsigned int minimun = constratint - slack;
+    void Dfs( unsigned int timing , unsigned int slack ) {
+        unsigned int minimun = timing - slack;
         GateList path;
         path.push_back(&start);
         while (path.size()) {
