@@ -1,6 +1,5 @@
+#pragma once
 #define _CRT_SECURE_NO_WARNINGS
-#ifndef __NETWORK__
-#define __NETWORK__
 #include <cstring>
 #include <iostream>
 #include <list>
@@ -36,23 +35,42 @@ void printContainer(Container &container) {
 
 struct Gate {
     string name;
-    GateType type;
-    short value;
-    int arrival_time;
     GateList fan_in;
     GateList fan_out;
     GateList::iterator fan_out_it;
+    GateType type;
+    short value;
+    int arrival_time;
     bool hasTrav;
-    Gate() : type(NONE), value(-1), arrival_time(-1), hasTrav(false) {}
+    Gate* true_fan_in;
+    Gate() : type(NONE), value(-1), arrival_time(0), hasTrav(false),
+             true_fan_in(NULL) {}
     void eval(){
         if ( type == NOT )
             value = !fan_in.front()->value;
         else if ( type == NAND )
-            value = !(fan_in.front()->value&&fan_in.back()->value);
+            value = (!fan_in.front()->value) || (!fan_in.back()->value);
         else if ( type == NOR )
-            value = !(fan_in.front()->value||fan_in.back()->value);
+            value = (!fan_in.front()->value) && (!fan_in.back()->value);
         else if ( type == OUTPUT )
             value = fan_in.front()->value;
+    }
+    Gate* trueinput() {
+        Gate *ret = NULL;
+        Gate *A = fan_in.front();
+        Gate *B = fan_in.back();
+        switch (type) {
+            case NAND:
+            ret = (A->arrival_time < B->arrival_time && A->value) ? B : A;
+            break;
+            case NOR:
+            ret = (A->arrival_time < B->arrival_time && !A->value) ? B : A;
+            break;
+            default:
+            ret = A;
+            break;
+        }
+        return ret;
     }
 };
 
@@ -274,7 +292,9 @@ struct Network {
             it->pop_front();
         }
     }
-    void topologySort() {
+
+    // Generate a sequence for evaluate network value without START GATE
+        void topologySort() {
         GateList stack;
         stack.push_back(&start);
         start.hasTrav = true;
@@ -298,7 +318,7 @@ struct Network {
 
     void random2Shrink(){
         randomInput();
-        evalNetworkValue();
+        evalNetwork();
         findTruePath();
     }
 
@@ -320,9 +340,9 @@ struct Network {
         for ( ;it != start.fan_out.end() ; ++it ){
             (*it)->value = rand() % 2;
         }
-        evalNetworkValue();
+        evalNetwork();
+        //test2PrintGateValue();
         findTruePath();
-        clearNetworkValue();
     }
 
     void force(){
@@ -335,17 +355,16 @@ struct Network {
         }
 
         for ( int i = 0 ; i < times ; i ++ ){
-            for ( vector<int>::iterator pattern_it = pattern.begin();
-                  pattern_it != pattern.end(); ++pattern_it)
-                cout << *pattern_it << " ";
-            cout << endl;
+            // for ( vector<int>::iterator pattern_it = pattern.begin();
+            //       pattern_it != pattern.end(); ++pattern_it)
+            //     cout << *pattern_it << " ";
+            // cout << endl;
             int index = 0;
             for ( GateList::iterator it = start.fan_out.begin();
                     it != start.fan_out.end();++it){
                 (*it)->value = pattern[index++];
             }
-            evalNetworkValue();
-            test2PrintGateValue();
+            evalNetwork();
             findTruePath();
             clearNetworkValue();
             addOne(pattern);
@@ -386,7 +405,7 @@ struct Network {
                     break;
                 me = (*path_it);
             }
-            if ( isTruePath ){
+            if (isTruePath) {
                 cout << ((*paths_it).front())->value << " ";
                 printContainer(*paths_it);
                 cout << endl;
@@ -400,7 +419,7 @@ struct Network {
         for ( GateMap::iterator it = gatePool.begin();
                 it != gatePool.end() ; ++it ){
                 cout << it->first << "(" << it->second->value << ")" << endl;
-                cout << it->first << "time: " << it->second->arrival_time <<
+                cout << "time: " << it->second->arrival_time <<
                 endl << "~~~~" << endl;
         }
         cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
@@ -408,7 +427,7 @@ struct Network {
 
     bool subFindTruePath( GateType type , Gate* me , Gate* you ){
         bool isTruePath = true;
-        if ( type == NAND ){
+        if ( type == NAND ) {
             if ( me->arrival_time != you->arrival_time){
                 if ( me->arrival_time > you->arrival_time ){
                     if ( you->value == 0 ){
@@ -455,60 +474,35 @@ struct Network {
 
     // return the last arrival fan_in, if anyone is unready return NULL
     Gate* isReady( Gate* out ){
-        Gate* temp = out->fan_in.front();
+	Gate* temp = out->fan_in.front();
         for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
             if ( (*it)->arrival_time == -1 )
                 return NULL;
             if ( temp->arrival_time < (*it)->arrival_time )
                 temp = (*it);
         }
-        return temp;
-    }
-
-    // evaluate each gate's arrival time
-    void evalArrivalTime(){
-        for (GateList::iterator it = start.fan_out.begin();
-             it != start.fan_out.end(); ++it)
-        {
-            (*it)->arrival_time = 0;
-        }
-
-        for (GateList::iterator it = evalSequence.begin();
-             it != evalSequence.end(); ++it)
-        {
-            (*it)->arrival_time = isReady(*it)->arrival_time + 1;
-        }
-    }
-    // support the evalNetworkValue function
-    bool isReady2Eval( Gate* out ){
-
-        for ( GateList::iterator it = out->fan_in.begin() ; it != out->fan_in.end() ; ++it ){
-            if ( (*it)->value == -1 )
-                return false;
-        }
-        return true;
+    	return temp;
     }
 
     // evaluate each gate's value
-    void evalNetworkValue(){
+    void evalNetwork(){
         for (GateList::iterator it = evalSequence.begin();
              it != evalSequence.end(); ++it)
         {
             (*it)->eval();
+            (*it)->arrival_time = (*it)->trueinput()->arrival_time + 1;
         }
     }
 
     // random test pattern
     void randomInput(){
-        /**************************************************************************************/
-        srand(time(0));
+	srand(time(0));
         cout << "the random pattern: " << endl;
-        for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it ){
+	for ( GateList::iterator it = start.fan_out.begin() ; it != start.fan_out.end() ; ++it ){
             (*it)->value = rand() % 2;
             cout << (*it)->value << " ";
         }
         cout << endl;
-        /**************************************************************************************/
     }
 
     // reset each gate's value
@@ -525,4 +519,3 @@ struct Network {
         }
     }
 };
-#endif

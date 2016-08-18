@@ -1,8 +1,12 @@
 CC = gcc
 CXX = g++
-CXXFLAGS = -O3 -Wall
+CXXFLAGS = -ggdb -Wall
 VPATH = src/
 TARGET = cadb090
+
+.PHONY: clean all
+
+all: $(TARGET) Makefile
 
 $(TARGET): Source.cpp Network.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -24,3 +28,6 @@ run_case4: $(TARGET)
 
 run_case5: $(TARGET)
 	./$(TARGET) 47 10 < test_cases/case5
+
+clean:
+	$(RM) $(TARGET)
