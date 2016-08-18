@@ -30,19 +30,19 @@ void getTokens(list<char *> &tokens, char *src) {
 	} while (tok);
 }
 
-char *getExpression() {
+char *Network::getExpression() {
     string line;
     string expression;
     do {
-        getline(cin, line);
+        getline(inputFile, line);
         expression += line;
-    } while (expression[expression.size() - 1] != ';' && !cin.eof());
+    } while (expression[expression.size() - 1] != ';' && !inputFile.eof());
     return strdup(expression.c_str());
 }
 
-Network::Network() {
-	start.name = "start";
-	end.name = "end";
+Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
+    : inputFile(in), timing(timing), slack(slack), start("start"), end("end")
+{
 	srand(time(NULL));
 }
 
@@ -61,6 +61,16 @@ void Network::gateWiring(Gate *input, Gate *output) {
 }
 
 void Network::createGraph() {
+    // clear heading comment
+    string line;
+    do {
+        getline(inputFile, line);
+    } while (line.substr(0, 2) == "//");
+    /*========================================================================*/
+    module_exp = getExpression();
+    inputs_exp = getExpression();
+    outputs_exp = getExpression();
+    wires_exp = getExpression();
 	////////////////////////////////////////////////////////////////////////
 	// SET INPUT
 	////////////////////////////////////////////////////////////////////////
@@ -200,7 +210,7 @@ void Network::createGraph() {
 	delete[] wires_exp;
 }
 
-void Network::Dfs(unsigned int timing, unsigned int slack) {
+void Network::DFS() {
 	unsigned int minimun = timing - slack;
 	GateList path;
 	path.push_back(&start);

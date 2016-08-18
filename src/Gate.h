@@ -12,7 +12,7 @@ enum GateType { NONE, NOT, NOR, NAND, WIRE, INPUT, OUTPUT };
 #define GATE_H
 class Gate{
 public:
-    Gate();
+    Gate(std::string name = "", GateType type = NONE);
 	void eval();
 	Gate* trueinput();
 	std::string name;

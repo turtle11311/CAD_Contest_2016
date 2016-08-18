@@ -3,6 +3,8 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <iostream>
+#include <climits>
 typedef std::map<std::string, Gate*> GateMap;
 
 template <typename Container>
@@ -12,7 +14,6 @@ void printContainer(Container &container) {
 		it != container.end(); ++it) {
 		std::cout << (*it)->name << ", ";
 	}
-
 	std::cout << "\b\b )";
 }
 
@@ -22,6 +23,9 @@ char *getExpression();
 class Network{
 	friend std::ostream &operator<<(std::ostream &out, const Gate &gate);
 public:
+    // Network data
+    std::istream &inputFile;
+    int timing, slack;
 	Gate start;
 	Gate end;
 	char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
@@ -29,12 +33,14 @@ public:
 	GateMap wirePool;
 	GateList evalSequence;
 	std::list<GateList> paths;
-	Network();
+    // Network function
+	Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
+        std::istream &in = std::cin);
 	~Network();
 	Gate *findGateByName(const char *name);
 	void gateWiring(Gate *input, Gate *output);
 	void createGraph();
-	void Dfs(unsigned int timing, unsigned int slack);
+	void DFS();
 	void topologySort();
 	void random2Shrink();
 	void addOne(std::vector<int>& pattern);
@@ -47,4 +53,5 @@ public:
 	void evalNetwork();
 	void randomInput();
 	void clearNetworkValue();
+    char* getExpression();
 };

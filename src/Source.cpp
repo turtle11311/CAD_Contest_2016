@@ -2,35 +2,29 @@
 #include "Network.h"
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <list>
 #include <string>
 using namespace std;
 
-
 int main(int argc, char const *argv[]) {
-    Network net;
-    string line;
-    list<char *> tokens;
     int timing, slack;
-    if (argc < 3) {
-        cerr << "Usage: " << argv[0] << "Timing Slack" << endl;
+    if (argc < 4) {
+        cerr << "Usage: " << argv[0] << "Timing Slack filename" << endl;
+        exit(EXIT_FAILURE);
+    }
+    std::ifstream file(argv[3]);
+    if(!file) {
+        cerr << "File " << argv[3] << " OPEN FAIL!" << endl;
         exit(EXIT_FAILURE);
     }
     timing = atoi(argv[1]);
     slack = atoi(argv[2]);
-    // clear heading comment
-    do {
-        getline(cin, line);
-    } while (line.substr(0, 2) == "//");
-    /*========================================================================*/
-    net.module_exp = getExpression();
-    net.inputs_exp = getExpression();
-    net.outputs_exp = getExpression();
-    net.wires_exp = getExpression();
+    Network net(timing, slack, file);
     net.createGraph();
-    net.Dfs(timing, slack);
+    net.DFS();
     net.topologySort();
-    net.forTest();
+    net.force();
     return 0;
 }

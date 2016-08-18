@@ -1,11 +1,11 @@
 #include"Gate.h"
 
-Gate::Gate() : type(NONE), value(-1), arrival_time(0), hasTrav(false),
+Gate::Gate(std::string name, GateType type)
+    : name(name), type(type), value(-1), arrival_time(0), hasTrav(false),
 true_fan_in(NULL) {}
 
 
 void Gate::eval(){
-
 	if (type == NOT)
 		value = !fan_in.front()->value;
 	else if (type == NAND)
