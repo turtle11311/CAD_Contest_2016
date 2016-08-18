@@ -8,8 +8,12 @@ TARGET = cadb090
 
 all: $(TARGET) Makefile
 
-$(TARGET): Source.cpp Network.h
-	$(CXX) $(CXXFLAGS) $< -o $@
+$(TARGET): Source.cpp Network.o Gate.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+Network.o: Network.cpp Network.h
+
+Gate.o: Gate.cpp Gate.h
 
 test: $(TARGET)
 	./$(TARGET) 10 7 < test_cases/case8
@@ -30,4 +34,4 @@ run_case5: $(TARGET)
 	./$(TARGET) 47 10 < test_cases/case5
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) *.o

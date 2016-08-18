@@ -1,3 +1,4 @@
 test_cases/
 cadb090
 src/Source.cpp
+*.o

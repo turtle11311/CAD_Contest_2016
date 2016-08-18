@@ -7,9 +7,9 @@
 #include <string>
 using namespace std;
 
-Network net;
 
 int main(int argc, char const *argv[]) {
+    Network net;
     string line;
     list<char *> tokens;
     int timing, slack;
@@ -29,20 +29,8 @@ int main(int argc, char const *argv[]) {
     net.outputs_exp = getExpression();
     net.wires_exp = getExpression();
     net.createGraph();
-    net.Dfs();
-    //net.random2Shrink();
-
-    //for ( GateMap::iterator it = net.gatePool.begin() ; it != net.gatePool.end() ; ++it ){
-    //    	if ( it->first == "w" )
-    //    		continue;
-    //        cout << "which gate: " << it->first << endl;
-    //        cout << "its fanins: ";
-    //        printContainer(it->second->fan_in);
-    //        cout<< endl;
-    //        cout << "its fanout: ";
-    //        printContainer(it->second->fan_out);
-    //        cout << endl;
-
-    //1}    
+    net.Dfs(timing, slack);
+    net.topologySort();
+    net.forTest();
     return 0;
 }
