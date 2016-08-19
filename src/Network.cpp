@@ -194,6 +194,18 @@ void Network::createGraph() {
             }
         }
     }
+    
+    for (GateList::iterator it = end.fan_in.begin();
+            it != end.fan_in.end(); ++it) {
+        if ((*it)->fan_out.size()) {
+            for (GateList::iterator fan_out_it = (*it)->fan_out.begin();
+                    fan_out_it != (*it)->fan_out.end(); ++fan_out_it) {
+                (*fan_out_it)->fan_in.front() = (*it)->fan_in.front();
+                (*it)->fan_in.front()->fan_out.push_back(*fan_out_it);
+            }
+            (*it)->fan_out.clear();
+        }
+    }
 
     // release wires memory
     for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
@@ -217,8 +229,9 @@ void Network::DFS() {
     while (path.size()) {
         if (path.back()->fan_out_it == path.back()->fan_out.end()) {
             if (path.back()->type == OUTPUT) {
-                if (path.size() - 3 > minimun)
+                if (path.size() - 3ul > minimun) {
                     paths.push_back(path);
+                }
             }
             path.back()->fan_out_it = path.back()->fan_out.begin();
             path.pop_back();
