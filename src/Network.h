@@ -15,7 +15,6 @@ void printContainer(Container &container) {
 		std::cout << (*it)->name << ", ";
 	}
 	std::cout << "\b\b )";
-}
 
 void getTokens(std::list<char *> &tokens, char *src);
 char *getExpression();
@@ -55,3 +54,4 @@ public:
 	void clearNetworkValue();
     char* getExpression();
 };
+void output_path(Network &net, GateList &path);
