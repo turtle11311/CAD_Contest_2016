@@ -200,7 +200,10 @@ void Network::createGraph() {
         if ((*it)->fan_out.size()) {
             for (GateList::iterator fan_out_it = (*it)->fan_out.begin();
                     fan_out_it != (*it)->fan_out.end(); ++fan_out_it) {
-                (*fan_out_it)->fan_in.front() = (*it)->fan_in.front();
+                if ((*fan_out_it)->fan_in.front() == (*it))
+                    (*fan_out_it)->fan_in.front() = (*it)->fan_in.front();
+                else 
+                    (*fan_out_it)->fan_in.back() = (*it)->fan_in.front();
                 (*it)->fan_in.front()->fan_out.push_back(*fan_out_it);
             }
             (*it)->fan_out.clear();
@@ -224,11 +227,13 @@ void Network::createGraph() {
 
 void Network::DFS() {
     unsigned int minimun = timing - slack;
+    int sum = 0;
     GateList path;
     path.push_back(&start);
     while (path.size()) {
         if (path.back()->fan_out_it == path.back()->fan_out.end()) {
             if (path.back()->type == OUTPUT) {
+                ++sum;
                 if (path.size() - 3ul > minimun) {
                     paths.push_back(path);
                 }
@@ -240,6 +245,7 @@ void Network::DFS() {
             path.push_back(*(path.back()->fan_out_it++));
         }
     }
+    cout << sum << " " << paths.size() << endl;
     for (list<GateList>::iterator it = paths.begin();
             it != paths.end(); ++it)
     {
