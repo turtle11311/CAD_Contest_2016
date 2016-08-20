@@ -7,6 +7,8 @@
 #include <climits>
 typedef std::map<std::string, Gate*> GateMap;
 
+class Network;
+class Path;
 template <typename Container>
 void printContainer(Container &container) {
     std::cout << "( ";
@@ -20,6 +22,12 @@ void printContainer(Container &container) {
 void getTokens(std::list<char *> &tokens, char *src);
 char *getExpression();
 
+class Path : public GateList {
+public:
+    Path();
+    bool rising, falling;
+};
+
 class Network{
     friend std::ostream &operator<<(std::ostream &out, const Gate &gate);
     public:
@@ -32,7 +40,7 @@ class Network{
     GateMap gatePool;
     GateMap wirePool;
     GateList evalSequence;
-    std::list<GateList> paths;
+    std::list<Path> paths;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
             std::istream &in = std::cin);
