@@ -281,9 +281,9 @@ void Network::topologySort() {
 }
 
 void Network::random2Shrink(){
-    randomInput();
-    evalNetwork();
-    findTruePath();
+    randomInput(0);
+    evalNetwork(0);
+    findTruePath(0);
 }
 
 // pattern + 1
@@ -311,11 +311,11 @@ bool isAllOne(std::vector<int> pattern){
 void Network::forTest() {
     GateList::iterator it = start.fan_out.begin();
     for (; it != start.fan_out.end(); ++it){
-        (*it)->value = rand() % 2;
+        (*it)->value[0] = rand() % 2;
     }
-    evalNetwork();
+    evalNetwork(0);
     //test2PrintGateValue();
-    findTruePath();
+    findTruePath(0);
 }
 
 void Network::force() {
@@ -329,19 +329,19 @@ void Network::force() {
         int index = 0;
         for (GateList::iterator it = start.fan_out.begin();
                 it != start.fan_out.end() ; ++it ){
-            (*it)->value = pattern[index++];
+            (*it)->value[0] = pattern[index++];
         }
-        evalNetwork();
-        findTruePath();
+        evalNetwork(0);
+        findTruePath(0);
         addOne(pattern);
     }while(!isAllOne(pattern));
 }
 
-void Network::findTruePath() {
+void Network::findTruePath(int pid) {
     for (list<Path>::iterator paths_it = paths.begin();
             paths_it != paths.end(); ++paths_it)
     {
-        short type = ((*paths_it).front())->value;
+        short type = ((*paths_it).front())->value[pid];
         if ((!type && paths_it->falling) || (type && paths_it->rising))
             continue;
         bool isTruePath = true;
@@ -358,7 +358,7 @@ void Network::findTruePath() {
                     you = (*path_it)->fan_in.front();
                     me = (*path_it)->fan_in.back();
                 }
-                isTruePath = subFindTruePath((*path_it)->type, me, you);
+                isTruePath = subFindTruePath(pid, (*path_it)->type, me, you);
             }
             if (!isTruePath)
                 break;
@@ -377,45 +377,45 @@ void Network::findTruePath() {
     }
 }
 
-bool Network::subFindTruePath(GateType type, Gate* me, Gate* you){
+bool Network::subFindTruePath(int pid, GateType type, Gate* me, Gate* you){
     bool isTruePath = true;
     if (type == NAND) {
-        if (me->arrival_time != you->arrival_time){
-            if (me->arrival_time > you->arrival_time){
-                if (you->value == 0){
+        if (me->arrival_time[pid] != you->arrival_time[pid]){
+            if (me->arrival_time[pid] > you->arrival_time[pid]){
+                if (you->value[pid] == 0){
                     isTruePath = false;
                 }
             }
             else{
-                if (me->value == 1){
+                if (me->value[pid] == 1){
                     isTruePath = false;
                 }
             }
         }
         else{
-            if (me->value != you->value){
-                if (me->value == 1 && you->value == 0){
+            if (me->value[pid] != you->value[pid]){
+                if (me->value[pid] == 1 && you->value[pid] == 0){
                     isTruePath = false;
                 }
             }
         }
     }
     else if (type == NOR){
-        if (me->arrival_time != you->arrival_time){
-            if (me->arrival_time > you->arrival_time){
-                if (you->value == 1){
+        if (me->arrival_time[pid] != you->arrival_time[pid]){
+            if (me->arrival_time[pid] > you->arrival_time[pid]){
+                if (you->value[pid] == 1){
                     isTruePath = false;
                 }
             }
             else{
-                if (me->value == 0){
+                if (me->value[pid] == 0){
                     isTruePath = false;
                 }
             }
         }
         else{
-            if (me->value != you->value){
-                if (me->value == 0 && you->value == 1){
+            if (me->value[pid] != you->value[pid]){
+                if (me->value[pid] == 0 && you->value[pid] == 1){
                     isTruePath = false;
                 }
             }
@@ -425,54 +425,50 @@ bool Network::subFindTruePath(GateType type, Gate* me, Gate* you){
 }
 
 // test to print  all the gate value
-void Network::test2PrintGateValue() {
+void Network::test2PrintGateValue(int pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
     for (GateMap::iterator it = gatePool.begin();
             it != gatePool.end(); ++it){
-        cout << it->first << "(" << it->second->value << ")" << endl;
-        cout << "time: " << it->second->arrival_time <<
+        cout << it->first << "(" << it->second->value[pid] << ")" << endl;
+        cout << "time: " << it->second->arrival_time[pid] <<
             endl << "~~~~" << endl;
     }
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
 }
 
 // return the last arrival fan_in, if anyone is unready return NULL
-Gate* Network::isReady(Gate* out) {
+Gate* Network::isReady(int pid, Gate* out) {
     Gate* temp = out->fan_in.front();
     for (GateList::iterator it = out->fan_in.begin(); it != out->fan_in.end(); ++it){
-        if ((*it)->arrival_time == -1)
+        if ((*it)->arrival_time[pid] == -1)
             return NULL;
-        if (temp->arrival_time < (*it)->arrival_time)
+        if (temp->arrival_time[pid] < (*it)->arrival_time[pid])
             temp = (*it);
     }
     return temp;
 }
 
 // evaluate each gate's value
-void Network::evalNetwork() {
+void Network::evalNetwork(int pid) {
     for (GateList::iterator it = evalSequence.begin();
             it != evalSequence.end(); ++it)
     {
-        (*it)->eval();
-        (*it)->arrival_time = (*it)->trueinput()->arrival_time + 1;
+        (*it)->eval(pid);
+        (*it)->arrival_time[pid] = (*it)->trueinput(pid)->arrival_time[pid] + 1;
     }
 }
 
 // random test pattern
-void Network::randomInput() {
+void Network::randomInput(int pid) {
     cout << "the random pattern: " << endl;
     for (GateList::iterator it = start.fan_out.begin(); it != start.fan_out.end(); ++it){
-        (*it)->value = rand() % 2;
-        cout << (*it)->value << " ";
+        (*it)->value[pid] = rand() % 2;
+        cout << (*it)->value[pid] << " ";
     }
     cout << endl;
 }
 
-// reset each gate's value
-void Network::clearNetworkValue() {
-    for (GateMap::iterator it = gatePool.begin(); it != gatePool.end(); ++it){
-        it->second->value = -1;
-    }
+void Network::parallelFindTruePath() {
 }
 
 Network::~Network() {

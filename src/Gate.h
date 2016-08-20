@@ -8,18 +8,17 @@ class Gate;
 typedef std::list<Gate *> GateList;
 enum GateType { NONE, NOT, NOR, NAND, WIRE, INPUT, OUTPUT };
 
-class Gate{
+class Gate {
 public:
     Gate(std::string name = "", GateType type = NONE);
-    void eval();
-    Gate* trueinput();
+    void eval(int pid);
+    Gate* trueinput(int pid);
     std::string name;
     GateList fan_in;
     GateList fan_out;
     GateList::iterator fan_out_it;
     GateType type;
-    short value;
-    int arrival_time;
+    short value[4];
+    int arrival_time[4];
     bool hasTrav;
-    Gate* true_fan_in;
 };
