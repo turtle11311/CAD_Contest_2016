@@ -27,7 +27,7 @@ char *getExpression();
 class Path : public GateList {
 public:
     Path();
-    bool rising, falling;
+    bool isFind[2];
 };
 
 void* findPatternTruePath(void *args);

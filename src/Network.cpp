@@ -33,7 +33,7 @@ void getTokens(list<char *> &tokens, char *src) {
     } while (tok);
 }
 
-Path::Path() : rising(false), falling(false)
+Path::Path() : isFind({false, false})
 {}
 
 char *Network::getExpression() {
@@ -345,7 +345,7 @@ void Network::findTruePath(int pid) {
             paths_it != paths.end(); ++paths_it)
     {
         short type = ((*paths_it).front())->value[pid];
-        if ((!type && paths_it->falling) || (type && paths_it->rising))
+        if (paths_it->isFind[type])
             continue;
         bool isTruePath = true;
         Gate* me = paths_it->front();
@@ -368,14 +368,16 @@ void Network::findTruePath(int pid) {
             me = (*path_it);
         }
         if (isTruePath) {
-            if (type) {
-                paths_it->rising = true;
-            } else {
-                paths_it->falling = true;
+            bool Print = false;
+            pthread_mutex_lock(&mutex);
+            Print = !paths_it->isFind[type];
+            paths_it->isFind[type] = true;
+            pthread_mutex_unlock(&mutex);
+            if (Print) {
+                cout << type << " ";
+                printContainer(*paths_it);
+                cout << endl;
             }
-            cout << type << " ";
-            printContainer(*paths_it);
-            cout << endl;
         }
     }
 }
