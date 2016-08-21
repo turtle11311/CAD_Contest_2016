@@ -30,6 +30,7 @@ public:
     bool isFind[2];
 };
 
+void output_format(args_t arg, std::list<Gate*> path);
 void* findPatternTruePath(void *args);
 
 class Network{

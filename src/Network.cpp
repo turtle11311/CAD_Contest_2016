@@ -2,13 +2,16 @@
 #include <pthread.h>
 #include <ctime>
 #include <cstdlib>
+#include <iomanip>
 using std::cout;
 using std::endl;
 using std::list;
 using std::cin;
 using std::string;
+using std::setw;
 
 static pthread_mutex_t mutex;
+static int truePathCounter = 0;
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate name: " << gate.name << endl;
@@ -44,6 +47,59 @@ char *Network::getExpression() {
         expression += line;
     } while (expression[expression.size() - 1] != ';' && !inputFile.eof());
     return strdup(expression.c_str());
+}
+
+void output_format(args_t arg, Path &path) {
+    Network *net = arg.first;
+    int pid = arg.second;
+    cout << "\nA True Path List\n{\n"
+        << "---------------------------------------------------------------------------\n"
+        << "Pin" << setw(11) << "type" << setw(47) << "Incr" << setw(59) << "Path delay\n"
+        << "---------------------------------------------------------------------------\n";
+    int constrain = net->timing;
+    GateList::iterator it = path.begin();
+    GateList::iterator temp;
+    for (; it != path.end(); ++it){
+        char mark;
+        if ((*it)->type == INPUT || (*it)->type == OUTPUT){
+            cout << (*it)->name;
+            cout << " (" << (*it)->type << ")" << "0" << setw(44)
+                << (*it)->arrival_time[pid] << setw(55) << " " << (*it)->value[pid] ? "r\n" : "f\n";
+        }
+
+        if ((*it)->type != INPUT || (*it)->type != OUTPUT){
+            cout << (*it)->name;
+            mark = it == (*it)->fan_in.begin() ? 'A' : 'B';
+            cout << "/" << mark;
+            cout << " (" << (*it)->type;
+            if ((*it)->type == NOT)
+                cout << "1";
+            else if ((*it)->type == NOR || (*it)->type == NAND)
+                cout << "2";
+            cout << ")" << "0" << setw(44);
+            cout << (*it)->arrival_time[pid] << setw(55) << " " << (*it)->value[pid] ? "r\n" : "f\n";
+
+            cout << (*it)->name;
+            cout << "/Y";
+            cout << " (" << (*it)->type;
+            if ((*it)->type == NOT)
+                cout << "1";
+            else if ((*it)->type == NOR || (*it)->type == NAND)
+                cout << "2";
+            cout << ")" << "0" << setw(44);
+            cout << (*it)->arrival_time[pid] << setw(55) << " " << (*it)->value[pid] ? "r\n" : "f\n";
+        }
+        temp = it;
+    }
+    cout << "--------------------------------------------------------------------------\n"
+        << "Data Required Time" << setw(30) << constrain << endl << "Data Arrival Time" << setw(30)
+        << path.size() - 2 << endl <<
+        "--------------------------------------------------------------------------\n"
+        << "Slack" << setw(30) << constrain - (path.size() - 2) << "}\n\n"
+        << "Input Vector\n{";
+    for (GateList::iterator it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
+        cout << (*it)->name << " = " << (*it)->value[pid] << endl;
+    cout << "\n}\n";
 }
 
 Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
@@ -371,12 +427,11 @@ void Network::findTruePath(int pid) {
             bool Print = false;
             pthread_mutex_lock(&mutex);
             Print = !paths_it->isFind[type];
+            truePathCounter += Print;
             paths_it->isFind[type] = true;
             pthread_mutex_unlock(&mutex);
             if (Print) {
-                cout << type << " ";
-                printContainer(*paths_it);
-                cout << endl;
+                output_format({this, pid}, *paths_it);
             }
         }
     }
