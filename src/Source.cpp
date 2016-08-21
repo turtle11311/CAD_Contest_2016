@@ -25,6 +25,6 @@ int main(int argc, char const *argv[]) {
     net.createGraph();
     net.DFS();
     net.topologySort();
-    net.force();
+    net.parallelFindTruePath();
     return 0;
 }

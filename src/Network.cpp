@@ -1,4 +1,5 @@
 #include "Network.h"
+#include <pthread.h>
 #include <ctime>
 #include <cstdlib>
 using std::cout;
@@ -6,6 +7,8 @@ using std::endl;
 using std::list;
 using std::cin;
 using std::string;
+
+static pthread_mutex_t mutex;
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate name: " << gate.name << endl;
@@ -280,10 +283,10 @@ void Network::topologySort() {
     evalSequence.pop_front();
 }
 
-void Network::random2Shrink(){
-    randomInput(0);
-    evalNetwork(0);
-    findTruePath(0);
+void Network::random2Shrink(int pid){
+    randomInput(pid);
+    evalNetwork(pid);
+    findTruePath(pid);
 }
 
 // pattern + 1
@@ -460,15 +463,35 @@ void Network::evalNetwork(int pid) {
 
 // random test pattern
 void Network::randomInput(int pid) {
-    cout << "the random pattern: " << endl;
     for (GateList::iterator it = start.fan_out.begin(); it != start.fan_out.end(); ++it){
         (*it)->value[pid] = rand() % 2;
-        cout << (*it)->value[pid] << " ";
     }
-    cout << endl;
 }
 
 void Network::parallelFindTruePath() {
+    pthread_t pid[4];
+    args_t args[4];
+    pthread_mutex_init(&mutex, NULL);
+    int ID[4];
+    for (int i = 0; i < 4; ++i) {
+        ID[i] = i;
+        args[i].first = this;
+        args[i].second = i;
+        pthread_create(&pid[i], NULL, findPatternTruePath, &args[i]);
+    }
+    for (int i = 0; i < 4; ++i) {
+        pthread_join(pid[i], NULL);
+    }
+}
+
+void* findPatternTruePath(void *args) {
+    args_t arg = *(args_t*)args;
+    Network *net = arg.first;
+    int ID = arg.second;
+    for(int i = 0; i < 250000; ++i) {
+        net->random2Shrink(ID);
+    }
+    pthread_exit(NULL);
 }
 
 Network::~Network() {

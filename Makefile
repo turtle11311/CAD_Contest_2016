@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CXXFLAGS = -ggdb -Wall -std=c++0x
+CXXFLAGS = -O3 -Wall -lpthread
 VPATH = src/
 TARGET = cadb090
 

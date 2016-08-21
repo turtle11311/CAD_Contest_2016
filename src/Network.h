@@ -5,10 +5,12 @@
 #include <vector>
 #include <iostream>
 #include <climits>
-typedef std::map<std::string, Gate*> GateMap;
-
+#include <utility>
 class Network;
 class Path;
+typedef std::map<std::string, Gate*> GateMap;
+typedef std::pair<Network*, int> args_t;
+
 template <typename Container>
 void printContainer(Container &container) {
     std::cout << "( ";
@@ -27,6 +29,8 @@ public:
     Path();
     bool rising, falling;
 };
+
+void* findPatternTruePath(void *args);
 
 class Network{
     friend std::ostream &operator<<(std::ostream &out, const Gate &gate);
@@ -50,10 +54,10 @@ class Network{
     void createGraph();
     void DFS();
     void topologySort();
-    void random2Shrink();
     void addOne(std::vector<int>& pattern);
     void forTest();
     void force();
+    void random2Shrink(int pid);
     void findTruePath(int pid);
     void test2PrintGateValue(int pid);
     bool subFindTruePath(int pid, GateType type, Gate* me, Gate* you);
