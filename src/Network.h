@@ -14,7 +14,7 @@ typedef std::set<Gate*> GateSet;
 typedef std::pair<Network*, int> args_t;
 
 template <typename Container>
-void printContainer(Container &container) {
+void printContainer(const Container &container) {
     int size = 0;
     std::cout << "( ";
     for (typename Container::const_iterator it = container.begin();
@@ -61,6 +61,7 @@ class Network{
     void gateWiring(Gate *input, Gate *output);
     void createGraph();
     void findAllPath();
+    GateSet findAssociatePI( Gate* );
     void topologySort();
     void addOne(std::vector<int>& pattern);
     void forTest();

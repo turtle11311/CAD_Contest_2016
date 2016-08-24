@@ -354,6 +354,25 @@ void Network::createGraph() {
     delete[] wires_exp;
 }
 
+GateSet Network::findAssociatePI(Gate* in){
+    
+    GateSet PISet;
+    GateList Queue;
+    Queue.push_back(in);
+    while( Queue.size() ){
+        for ( GateList::iterator it = Queue.front()->fan_in.begin();
+                it != Queue.front()->fan_in.end() ; ++it )
+            if ( (*it) != &start )
+                Queue.push_back(*it);
+        if ( Queue.front()->type == INPUT )
+            PISet.insert(Queue.front());
+        Queue.pop_front();
+    }
+
+
+    return PISet;
+}
+
 void Network::findAllPath() {
     Path path;
     for ( GateList::iterator it = start.fan_out.begin() ; 
