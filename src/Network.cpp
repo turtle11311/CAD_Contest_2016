@@ -442,7 +442,7 @@ void Network::forTest() {
         (*it)->value[0] = rand() % 2;
     }
     evalNetwork(0);
-    //test2PrintGateValue();
+    evalFLTime();
     findTruePath(0);
 }
 
@@ -558,9 +558,11 @@ void Network::test2PrintGateValue(int pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
     for (GateMap::iterator it = gatePool.begin();
             it != gatePool.end(); ++it){
-        cout << it->first << "(" << it->second->value[pid] << ")" << endl;
-        cout << "time: " << it->second->arrival_time[pid] <<
-            endl << "~~~~" << endl;
+        cout << it->first << endl;
+        cout << "value: " << it->second->value[pid] << endl;
+        cout << "time: " << it->second->arrival_time[pid] << endl;
+        cout << "First in: " << "(" << it->second->first_in << ")" << endl;
+        cout << "Last in: " << "(" << it->second->last_in << ")" << endl;
     }
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
 }
@@ -575,6 +577,24 @@ Gate* Network::isReady(int pid, Gate* out) {
             temp = (*it);
     }
     return temp;
+}
+
+// evaluate first/last in
+void Network::evalFLTime(){
+
+    for ( GateList::iterator it = evalSequence.begin(); it != evalSequence.end() ; ++it){
+        (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
+            ((*it)->fan_in.front()->first_in + 1) : 
+            (((*it)->fan_in.front()->first_in < (*it)->fan_in.back()->first_in) ? 
+             ((*it)->fan_in.front()->first_in + 1) : ((*it)->fan_in.back()->first_in + 1)
+             );
+        (*it)->last_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
+            ((*it)->fan_in.front()->last_in + 1) : 
+            (((*it)->fan_in.front()->last_in > (*it)->fan_in.back()->last_in) ? 
+             ((*it)->fan_in.front()->last_in + 1) : ((*it)->fan_in.back()->last_in + 1)
+             );
+    }
+    test2PrintGateValue(0);
 }
 
 // evaluate each gate's value

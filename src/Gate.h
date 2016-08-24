@@ -21,4 +21,7 @@ public:
     short value[4];
     int arrival_time[4];
     bool hasTrav;
+
+    int first_in;
+    int last_in;
 };

@@ -69,4 +69,5 @@ class Network{
     void randomInput(int pid);
     char* getExpression();
     void parallelFindTruePath();
+    void evalFLTime();
 };
