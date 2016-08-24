@@ -13,12 +13,13 @@ typedef std::pair<Network*, int> args_t;
 
 template <typename Container>
 void printContainer(Container &container) {
+    int size = 0;
     std::cout << "( ";
     for (typename Container::const_iterator it = container.begin();
             it != container.end(); ++it) {
-        std::cout << (*it)->name << ", ";
+        std::cout << (*it)->name << (++size != container.size() ? ", " : "");
     }
-    std::cout << "\b\b )";
+    std::cout << " )";
 }
 
 void getTokens(std::list<char *> &tokens, char *src);
@@ -60,6 +61,7 @@ class Network{
     void addOne(std::vector<int>& pattern);
     void forTest();
     void force();
+    void printAllPaths();
     void random2Shrink(int pid);
     void findTruePath(int pid);
     void test2PrintGateValue(int pid);

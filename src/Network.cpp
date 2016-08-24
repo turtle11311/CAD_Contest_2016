@@ -352,8 +352,6 @@ void Network::createGraph() {
     delete[] module_exp;
     delete[] outputs_exp;
     delete[] wires_exp;
-    cout << "Header  {  A True Path Set  }" << endl << endl;
-    cout << "Benchmark  {  " << moduleName << "  }" << endl;
 }
 
 void Network::DFS() {
@@ -381,6 +379,11 @@ void Network::DFS() {
     {
         it->pop_front();
     }
+}
+
+void Network::printAllPaths() {
+    for (list<Path>::iterator it = paths.begin(); it != paths.end(); ++it)
+        printContainer(*it), cout << endl;
 }
 
 // Generate a sequence for evaluate network value without START GATE
@@ -595,6 +598,8 @@ void Network::randomInput(int pid) {
 }
 
 void Network::parallelFindTruePath() {
+    cout << "Header  {  A True Path Set  }" << endl << endl;
+    cout << "Benchmark  {  " << moduleName << "  }" << endl;
     pthread_t pid[4];
     args_t args[4];
     pthread_mutex_init(&mutex, NULL);
