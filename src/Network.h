@@ -3,12 +3,14 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <set>
 #include <iostream>
 #include <climits>
 #include <utility>
 class Network;
 class Path;
 typedef std::map<std::string, Gate*> GateMap;
+typedef std::set<Gate*> GateSet;
 typedef std::pair<Network*, int> args_t;
 
 template <typename Container>
@@ -49,6 +51,8 @@ class Network{
     GateList evalSequence;
     std::list<Path> paths;
     int pathCounter;
+    unsigned int minimun;
+    std::map<Gate*,GateSet> IOMap;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
             std::istream &in = std::cin);
@@ -56,12 +60,13 @@ class Network{
     Gate *findGateByName(const char *name);
     void gateWiring(Gate *input, Gate *output);
     void createGraph();
-    void DFS();
+    void findAllPath();
     void topologySort();
     void addOne(std::vector<int>& pattern);
     void forTest();
     void force();
     void printAllPaths();
+    void printIOMap();
     void random2Shrink(int pid);
     void findTruePath(int pid);
     void test2PrintGateValue(int pid);

@@ -164,7 +164,7 @@ char *Network::getExpression() {
 
 Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
     : inputFile(in), timing(timing), slack(slack), start("start"), end("end"),
-      pathCounter(0)
+      pathCounter(0), minimun(timing - slack)
 {
     srand(time(NULL));
 }
@@ -354,31 +354,41 @@ void Network::createGraph() {
     delete[] wires_exp;
 }
 
-void Network::DFS() {
-    unsigned int minimun = timing - slack;
-    int sum = 0;
+void Network::findAllPath() {
     Path path;
-    path.push_back(&start);
-    while (path.size()) {
-        if (path.back()->fan_out_it == path.back()->fan_out.end()) {
-            if (path.back()->type == OUTPUT) {
-                ++sum;
-                if (path.size() - 3ul > minimun) {
-                    paths.push_back(path);
+    for ( GateList::iterator it = start.fan_out.begin() ; 
+            it != start.fan_out.end() ; ++it ){
+        path.push_back(*it);
+        while (path.size()) {
+            if (path.back()->fan_out_it == path.back()->fan_out.end()) {
+                if (path.back()->type == OUTPUT) {
+                    if (path.size() - 2ul > minimun) {
+                        IOMap[path.back()].insert(path.front());
+                        paths.push_back(path);
+                    }
                 }
+                path.back()->fan_out_it = path.back()->fan_out.begin();
+                path.pop_back();
             }
-            path.back()->fan_out_it = path.back()->fan_out.begin();
-            path.pop_back();
-        }
-        else {
-            path.push_back(*(path.back()->fan_out_it++));
+            else {
+                path.push_back(*(path.back()->fan_out_it++));
+            }
         }
     }
-    for (list<Path>::iterator it = paths.begin();
-            it != paths.end(); ++it)
-    {
-        it->pop_front();
+}
+
+void Network::printIOMap(){
+    cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ; 
+            map_it != IOMap.end() ; ++map_it ){
+        cout << "PO's name: " << map_it->first->name << endl;
+        for ( GateSet::iterator set_it = map_it->second.begin(); 
+                set_it != map_it->second.end() ; ++set_it ){
+            cout << (*set_it)->name << ", ";
+        }
+        cout << endl;
     }
+    cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
 }
 
 void Network::printAllPaths() {
