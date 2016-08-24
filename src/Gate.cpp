@@ -2,7 +2,7 @@
 
 Gate::Gate(std::string name, GateType type)
     : name(name), type(type), value({-1,-1,-1,-1}), arrival_time({0,0,0,0}),
-      hasTrav(false) {}
+      hasTrav(false) , first_in(0) , last_in(0) {}
 
     void Gate::eval(int pid){
         if (type == NOT)
