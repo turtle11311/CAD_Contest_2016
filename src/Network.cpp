@@ -345,13 +345,17 @@ void Network::createGraph() {
         delete it->second;
     }
 
-    // reset the fan_out_it, after the original iterator is never effect
-    for (GateMap::iterator it = gatePool.begin(); it != gatePool.end(); ++it){
-        it->second->fan_out_it = it->second->fan_out.begin();
-    }
+    resetAllfan_out_it();
     delete[] module_exp;
     delete[] outputs_exp;
     delete[] wires_exp;
+}
+
+// reset the fan_out_it, after the original iterator is never effect
+void Network::resetAllfan_out_it() {
+    for (GateMap::iterator it = gatePool.begin(); it != gatePool.end(); ++it){
+        it->second->fan_out_it = it->second->fan_out.begin();
+    }
 }
 
 GateSet Network::findAssociatePI(Gate* in){
@@ -368,8 +372,6 @@ GateSet Network::findAssociatePI(Gate* in){
             PISet.insert(Queue.front());
         Queue.pop_front();
     }
-
-
     return PISet;
 }
 
@@ -438,6 +440,7 @@ void Network::topologySort() {
         }
     }
     evalSequence.pop_front();
+    resetAllfan_out_it();
 }
 
 void Network::random2Shrink(int pid){
@@ -585,6 +588,67 @@ bool Network::subFindTruePath(int pid, GateType type, Gate* me, Gate* you){
     return isTruePath;
 }
 
+void Network::genPISequence(Path &path) {
+    GateList criticList;
+    Gate* me = path.front();
+    for (GateList::iterator it = start.fan_out.begin();
+        it != start.fan_out.end(); ++it) {
+        (*it)->hasTrav = false;
+    }
+    // put critical gate to trySeq
+    for (Path::iterator it = path.begin(); it != path.end(); ++it) {
+        if ((*it)->type == NAND || (*it)->type == NOR) {
+            Gate *you;
+            if ((*it)->type == NAND || (*it)->type == NOR) {
+                if (me == (*it)->fan_in.front()){
+                    you = (*it)->fan_in.back();
+                }
+                else {
+                    you = (*it)->fan_in.front();
+                    me = (*it)->fan_in.back();
+                }
+            }
+            if (you->first_in > me->last_in || you->last_in < me->first_in) {
+                GateSet set = findAssociatePI(*it);
+                for (GateSet::iterator set_it = set.begin();
+                     set_it != set.end(); ++set_it) {
+                    if (!(*set_it)->hasTrav) {
+                        path.PISequence.push_back(*set_it);
+                        cout << "S1" << endl;
+                        (*set_it)->hasTrav = true;
+                    }
+                }
+            }
+        }
+        me = *it;
+    }
+    //add AccosiateSeq
+    GateSet acSet = findAssociatePI(path.back());
+    for (GateSet::iterator it = acSet.begin();
+         it != acSet.end(); ++it) {
+        if (!(*it)->hasTrav) {
+            path.PISequence.push_back(*it);
+            cout << "S2" << endl;
+            (*it)->hasTrav = true;
+        }
+    }
+    // add remain PI
+    for (GateList::iterator it = start.fan_out.begin();
+        it != start.fan_out.end(); ++it) {
+        if (!(*it)->hasTrav) {
+            path.PISequence.push_back(*it);
+            cout << "S3" << endl;
+            (*it)->hasTrav = true;
+        }
+    }
+}
+
+void Network::genAllPISequence() {
+    for (list<Path>::iterator it = paths.begin(); it != paths.end(); ++it) {
+        genPISequence(*it);
+    }
+}
+
 // test to print  all the gate value
 void Network::test2PrintGateValue(int pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
@@ -613,7 +677,6 @@ Gate* Network::isReady(int pid, Gate* out) {
 
 // evaluate first/last in
 void Network::evalFLTime(){
-
     for ( GateList::iterator it = evalSequence.begin(); it != evalSequence.end() ; ++it){
         (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
             ((*it)->fan_in.front()->first_in + 1) : 
@@ -626,7 +689,6 @@ void Network::evalFLTime(){
              ((*it)->fan_in.front()->last_in + 1) : ((*it)->fan_in.back()->last_in + 1)
              );
     }
-    test2PrintGateValue(0);
 }
 
 // evaluate each gate's value

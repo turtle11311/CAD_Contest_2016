@@ -30,6 +30,7 @@ char *getExpression();
 class Path : public GateList {
 public:
     Path();
+    GateList PISequence;
     bool isFind[2];
 };
 
@@ -61,6 +62,7 @@ class Network{
     void gateWiring(Gate *input, Gate *output);
     void createGraph();
     void findAllPath();
+    void resetAllfan_out_it();
     GateSet findAssociatePI( Gate* );
     void topologySort();
     void addOne(std::vector<int>& pattern);
@@ -71,6 +73,8 @@ class Network{
     void random2Shrink(int pid);
     void findTruePath(int pid);
     void test2PrintGateValue(int pid);
+    void genPISequence(Path &path);
+    void genAllPISequence();
     bool subFindTruePath(int pid, GateType type, Gate* me, Gate* you);
     Gate* isReady(int pid, Gate* out);
     void evalNetwork(int pid);
