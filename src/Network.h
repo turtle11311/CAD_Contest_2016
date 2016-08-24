@@ -42,10 +42,12 @@ class Network{
     Gate start;
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
+    std::string moduleName;
     GateMap gatePool;
     GateMap wirePool;
     GateList evalSequence;
     std::list<Path> paths;
+    int pathCounter;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
             std::istream &in = std::cin);

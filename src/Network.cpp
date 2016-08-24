@@ -41,115 +41,115 @@ Path::Path() : isFind({false, false})
 void output_format(args_t arg, Path &path) {
     Network *net = arg.first;
     int pid = arg.second;
-    cout << "\n\n\nA True Path List\n{\n"
+    cout << "\nA True Path List\n{\n"
         << "---------------------------------------------------------------------------\n"
         << "Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
         << "---------------------------------------------------------------------------\n";
     int constrain = net->timing;
     GateList::iterator it = path.begin();
     GateList::iterator temp;
-	GateType pattern_type;
-	int slack_time = 0;
-	std::string buf;
+    GateType pattern_type;
+    int slack_time = 0;
+    std::string buf;
     for (; it != path.end(); ++it){
         if ((*it)->type == 5 || (*it)->type == 6){
-			cout << std::left << setw(44);
-			buf = (*it)->name + " (";
-			switch((*it)->type)
-			{
-				case 5:
-				buf+="in)";
-				break;
-				case 6:
-				buf+="out)";
-				break;
-			}
-			cout<<buf << setw(11) << "0"<< (*it)->arrival_time[pid] << " ";
-				if((*it)->value[pid])
-					cout << "r\n";
-				else
-					cout << "f\n";
+            cout << std::left << setw(44);
+            buf = (*it)->name + " (";
+            switch((*it)->type)
+            {
+                case 5:
+                    buf+="in)";
+                    break;
+                case 6:
+                    buf+="out)";
+                    break;
+            }
+            cout << buf << setw(11) << "0" << (*it)->arrival_time[pid] - ((*it)->type == OUTPUT) << " ";
+            if((*it)->value[pid])
+                cout << "r\n";
+            else
+                cout << "f\n";
         }
 
         if ((*it)->type != 5 && (*it)->type != 6){
-			cout << std::left << setw(44);
+            cout << std::left << setw(44);
             buf = (*it)->name;
-			if(*temp == (*it)->fan_in.front())
-				buf+="/A (";
-			else
-				buf+="/B (";
-				switch((*it)->type)
-			{
-				case 1:
-				buf+="NOT";
-				break;
-				case 2:
-				buf+="NOR";
-				break;
-				case 3:
-				buf+="NAND";
-				break;
-			}
+            if(*temp == (*it)->fan_in.front())
+                buf+="/A (";
+            else
+                buf+="/B (";
+            switch((*it)->type)
+            {
+                case 1:
+                    buf+="NOT";
+                    break;
+                case 2:
+                    buf+="NOR";
+                    break;
+                case 3:
+                    buf+="NAND";
+                    break;
+            }
             if ((*it)->type == 1)
                 buf+="1)";
             else if ((*it)->type == 2 || (*it)->type == 3)
                 buf+="2)";
-			cout << buf << setw(11) << "0" << (*temp)->arrival_time[pid]  << " ";
-			if((*temp)->value[pid])
-				cout << "r\n";
-			else
-				cout << "f\n";
+            cout << buf << setw(11) << "0" << (*temp)->arrival_time[pid]  << " ";
+            if((*temp)->value[pid])
+                cout << "r\n";
+            else
+                cout << "f\n";
 
-			cout << std::left << setw(44);
+            cout << std::left << setw(44);
             buf = (*it)->name;
             buf+="/Y (";
 
             switch((*it)->type)
-			{
-				case 1:
-				buf+="NOT";
-				break;
-				case 2:
-				buf+="NOR";
-				break;
-				case 3:
-				buf+="NAND";
-				break;
-			}
+            {
+                case 1:
+                    buf+="NOT";
+                    break;
+                case 2:
+                    buf+="NOR";
+                    break;
+                case 3:
+                    buf+="NAND";
+                    break;
+            }
             if ((*it)->type == 1)
                 buf+="1)";
             else if ((*it)->type == 2 || (*it)->type == 3)
                 buf+="2)";
-			cout << buf << setw(11) << "1" << (*it)->arrival_time[pid]  << " ";
-			if((*it)->value[pid])
-				cout << "r\n";
-			else
-				cout << "f\n";
-			slack_time = (*it)->arrival_time[pid];
+            cout << buf << setw(11) << "1" << (*it)->arrival_time[pid]  << " ";
+            if((*it)->value[pid])
+                cout << "r\n";
+            else
+                cout << "f\n";
+            slack_time = (*it)->arrival_time[pid];
         }
         temp = it;
     }
     cout << "--------------------------------------------------------------------------\n"
-         << setw(30) << "Data Required Time"  << constrain << endl;
-		cout << setw(30)  << "Data Arrival Time" ;
-        cout << slack_time << endl <<
+        << setw(30) << "Data Required Time"  << constrain << endl;
+    cout << setw(30)  << "Data Arrival Time" ;
+    cout << slack_time << endl <<
         "--------------------------------------------------------------------------\n";
-        cout << setw(30) << "Slack"   << constrain - slack_time << "\n}\n\n"
+    cout << setw(30) << "Slack"   << constrain - slack_time << "\n}\n\n"
         << "Input Vector\n{\n";
     for (GateList::iterator it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
-	{
-		cout << (*it)->name << " = ";
-		if(*it == *(path.begin()))
-		{
-			if((*it)->value[pid])
-				cout << "r\n";
-			else
-				cout << "f\n";
-		}
-		else
-		cout << (*it)->value[pid] << endl;
-	}
-    cout << "}\n\n\n";
+    {
+        cout << (*it)->name << " = ";
+        if(*it == *(path.begin()))
+        {
+            if((*it)->value[pid])
+                cout << "r\n";
+            else
+                cout << "f\n";
+        }
+        else
+            cout << (*it)->value[pid] << endl;
+    }
+    cout << "}\n";
 }
 
 char *Network::getExpression() {
@@ -163,7 +163,8 @@ char *Network::getExpression() {
 }
 
 Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
-    : inputFile(in), timing(timing), slack(slack), start("start"), end("end")
+    : inputFile(in), timing(timing), slack(slack), start("start"), end("end"),
+      pathCounter(0)
 {
     srand(time(NULL));
 }
@@ -188,15 +189,21 @@ void Network::createGraph() {
     do {
         getline(inputFile, line);
     } while (line.substr(0, 2) == "//");
-    /*========================================================================*/
+    /*=======================================================================*/
+    list<char *> tokens;
     module_exp = getExpression();
     inputs_exp = getExpression();
     outputs_exp = getExpression();
     wires_exp = getExpression();
-    ////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+    // Module
+    ///////////////////////////////////////////////////////////////////////////
+    getTokens(tokens, module_exp);
+    tokens.pop_front();
+    moduleName = tokens.front();
+    ///////////////////////////////////////////////////////////////////////////
     // SET INPUT
-    ////////////////////////////////////////////////////////////////////////
-    list<char *> tokens;
+    ///////////////////////////////////////////////////////////////////////////
     getTokens(tokens, inputs_exp);
     tokens.pop_front();
     for (list<char *>::iterator it = tokens.begin(); it != tokens.end();
@@ -209,9 +216,9 @@ void Network::createGraph() {
         gatePool[newGate->name] = newGate;
     }
     start.fan_out_it = start.fan_out.begin();
-    ////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
     // SET OUTPUT
-    ////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
     getTokens(tokens, outputs_exp);
     tokens.pop_front();
     for (list<char *>::iterator it = tokens.begin(); it != tokens.end();
@@ -224,9 +231,9 @@ void Network::createGraph() {
         newGate->fan_out_it = newGate->fan_out.begin();
     }
     end.fan_out_it = end.fan_out.begin();
-    ////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // SET WIRE
-    ////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     getTokens(tokens, wires_exp);
     tokens.pop_front();
     for (list<char *>::iterator it = tokens.begin(); it != tokens.end();
@@ -236,9 +243,9 @@ void Network::createGraph() {
         newWire->type = WIRE;
         wirePool[newWire->name] = newWire;
     }
-    ////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // SET GATE
-    ////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     char *gate_declare;
     char *g1, *g2, *g3;
     Gate *nowGate;
@@ -345,6 +352,8 @@ void Network::createGraph() {
     delete[] module_exp;
     delete[] outputs_exp;
     delete[] wires_exp;
+    cout << "Header  {  A True Path Set  }" << endl << endl;
+    cout << "Benchmark  {  " << moduleName << "  }" << endl;
 }
 
 void Network::DFS() {
@@ -489,6 +498,7 @@ void Network::findTruePath(int pid) {
             Print = !paths_it->isFind[type];
             paths_it->isFind[type] = true;
             if (Print) {
+                cout << "\nPath  {  " << ++pathCounter << "  }" << endl;
                 output_format({this, pid}, *paths_it);
             }
             pthread_mutex_unlock(&mutex);
@@ -605,6 +615,8 @@ void* findPatternTruePath(void *args) {
     Network *net = arg.first;
     int ID = arg.second;
     for(int i = 0; i < 250000; ++i) {
+        if (net->pathCounter >= net->paths.size() * 2)
+            break;
         net->random2Shrink(ID);
     }
     pthread_exit(NULL);
