@@ -3,6 +3,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iomanip>
+#include <utility>
 using std::cout;
 using std::endl;
 using std::list;
@@ -359,7 +360,7 @@ void Network::resetAllfan_out_it() {
 }
 
 GateSet Network::findAssociatePI(Gate* in){
-    
+
     GateSet PISet;
     GateList Queue;
     Queue.push_back(in);
@@ -377,7 +378,7 @@ GateSet Network::findAssociatePI(Gate* in){
 
 void Network::findAllPath() {
     Path path;
-    for ( GateList::iterator it = start.fan_out.begin() ; 
+    for ( GateList::iterator it = start.fan_out.begin() ;
             it != start.fan_out.end() ; ++it ){
         path.push_back(*it);
         while (path.size()) {
@@ -400,10 +401,10 @@ void Network::findAllPath() {
 
 void Network::printIOMap(){
     cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ; 
+    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ;
             map_it != IOMap.end() ; ++map_it ){
         cout << "PO's name: " << map_it->first->name << endl;
-        for ( GateSet::iterator set_it = map_it->second.begin(); 
+        for ( GateSet::iterator set_it = map_it->second.begin();
                 set_it != map_it->second.end() ; ++set_it ){
             cout << (*set_it)->name << ", ";
         }
@@ -609,7 +610,7 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set = findAssociatePI(*it);
+                GateSet set = std::move(findAssociatePI(*it));
                 for (GateSet::iterator set_it = set.begin();
                      set_it != set.end(); ++set_it) {
                     if (!(*set_it)->hasTrav) {
@@ -622,17 +623,9 @@ void Network::genPISequence(Path &path) {
         me = *it;
     }
     //add AccosiateSeq
-    GateSet acSet = findAssociatePI(path.back());
+    GateSet acSet = std::move(findAssociatePI(path.back()));
     for (GateSet::iterator it = acSet.begin();
          it != acSet.end(); ++it) {
-        if (!(*it)->hasTrav) {
-            path.PISequence.push_back(*it);
-            (*it)->hasTrav = true;
-        }
-    }
-    // add remain PI
-    for (GateList::iterator it = start.fan_out.begin();
-        it != start.fan_out.end(); ++it) {
         if (!(*it)->hasTrav) {
             path.PISequence.push_back(*it);
             (*it)->hasTrav = true;
@@ -675,14 +668,14 @@ Gate* Network::isReady(int pid, Gate* out) {
 // evaluate first/last in
 void Network::evalFLTime(){
     for ( GateList::iterator it = evalSequence.begin(); it != evalSequence.end() ; ++it){
-        (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
-            ((*it)->fan_in.front()->first_in + 1) : 
-            (((*it)->fan_in.front()->first_in < (*it)->fan_in.back()->first_in) ? 
+        (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ?
+            ((*it)->fan_in.front()->first_in + 1) :
+            (((*it)->fan_in.front()->first_in < (*it)->fan_in.back()->first_in) ?
              ((*it)->fan_in.front()->first_in + 1) : ((*it)->fan_in.back()->first_in + 1)
              );
-        (*it)->last_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
-            ((*it)->fan_in.front()->last_in + 1) : 
-            (((*it)->fan_in.front()->last_in > (*it)->fan_in.back()->last_in) ? 
+        (*it)->last_in = ( (*it)->type != NAND && (*it)->type != NOR ) ?
+            ((*it)->fan_in.front()->last_in + 1) :
+            (((*it)->fan_in.front()->last_in > (*it)->fan_in.back()->last_in) ?
              ((*it)->fan_in.front()->last_in + 1) : ((*it)->fan_in.back()->last_in + 1)
              );
     }

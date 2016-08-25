@@ -25,7 +25,6 @@ void printContainer(const Container &container) {
 }
 
 void getTokens(std::list<char *> &tokens, char *src);
-char *getExpression();
 
 class Path : public GateList {
 public:
