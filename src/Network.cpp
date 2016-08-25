@@ -359,7 +359,7 @@ void Network::resetAllfan_out_it() {
 }
 
 GateSet Network::findAssociatePI(Gate* in){
-    
+
     GateSet PISet;
     GateList Queue;
     Queue.push_back(in);
@@ -377,7 +377,7 @@ GateSet Network::findAssociatePI(Gate* in){
 
 void Network::findAllPath() {
     Path path;
-    for ( GateList::iterator it = start.fan_out.begin() ; 
+    for ( GateList::iterator it = start.fan_out.begin() ;
             it != start.fan_out.end() ; ++it ){
         path.push_back(*it);
         while (path.size()) {
@@ -400,10 +400,10 @@ void Network::findAllPath() {
 
 void Network::printIOMap(){
     cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ; 
+    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ;
             map_it != IOMap.end() ; ++map_it ){
         cout << "PO's name: " << map_it->first->name << endl;
-        for ( GateSet::iterator set_it = map_it->second.begin(); 
+        for ( GateSet::iterator set_it = map_it->second.begin();
                 set_it != map_it->second.end() ; ++set_it ){
             cout << (*set_it)->name << ", ";
         }
@@ -675,14 +675,14 @@ Gate* Network::isReady(int pid, Gate* out) {
 // evaluate first/last in
 void Network::evalFLTime(){
     for ( GateList::iterator it = evalSequence.begin(); it != evalSequence.end() ; ++it){
-        (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
-            ((*it)->fan_in.front()->first_in + 1) : 
-            (((*it)->fan_in.front()->first_in < (*it)->fan_in.back()->first_in) ? 
+        (*it)->first_in = ( (*it)->type != NAND && (*it)->type != NOR ) ?
+            ((*it)->fan_in.front()->first_in + 1) :
+            (((*it)->fan_in.front()->first_in < (*it)->fan_in.back()->first_in) ?
              ((*it)->fan_in.front()->first_in + 1) : ((*it)->fan_in.back()->first_in + 1)
              );
-        (*it)->last_in = ( (*it)->type != NAND && (*it)->type != NOR ) ? 
-            ((*it)->fan_in.front()->last_in + 1) : 
-            (((*it)->fan_in.front()->last_in > (*it)->fan_in.back()->last_in) ? 
+        (*it)->last_in = ( (*it)->type != NAND && (*it)->type != NOR ) ?
+            ((*it)->fan_in.front()->last_in + 1) :
+            (((*it)->fan_in.front()->last_in > (*it)->fan_in.back()->last_in) ?
              ((*it)->fan_in.front()->last_in + 1) : ((*it)->fan_in.back()->last_in + 1)
              );
     }
@@ -739,5 +739,39 @@ Network::~Network() {
     for (GateMap::iterator it = gatePool.begin(); it != gatePool.end();
             ++it) {
         delete it->second;
+    }
+}
+
+void Network::forwardSimulation( int pid , Gate* current ){
+
+    for ( auto cur_fan_out : current->fan_out )
+        if ( cur_fan_out->value[pid] != -1  )
+            return;
+
+    if ( current->type == NOT || current->type == OUTPUT ){
+        current->value[pid] = (current->type == NOT)?
+                        !current->fan_in.front()->value[pid] :
+                        current->fan_in.front()->value[pid];
+        for ( auto cur_fan_out : current->fan_out )
+            forwardSimulation(pid,cur_fan_out);
+    }
+
+    else if ( current->type == NOR || current->type == NAND ){
+        int ctrlValue = ( current->type == NOR );
+        if ( current->fan_in.front()->value[pid] == ctrlValue ||
+            current->fan_in.back()->value[pid] == ctrlValue ){
+            current->value[pid] = !ctrlValue;
+            for ( auto cur_fan_out : current->fan_out )
+                forwardSimulation(pid,cur_fan_out);
+        }
+        else if ( current->fan_in.front()->value[pid] == -1 ||
+                current->fan_in.back()->value[pid] == -1 ){
+            return;
+        }
+        else{
+            current->value[pid] = ctrlValue;
+            for ( auto cur_fan_out : current->fan_out )
+                forwardSimulation(pid,cur_fan_out);
+        }
     }
 }
