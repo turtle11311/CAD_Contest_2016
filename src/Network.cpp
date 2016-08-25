@@ -614,7 +614,6 @@ void Network::genPISequence(Path &path) {
                      set_it != set.end(); ++set_it) {
                     if (!(*set_it)->hasTrav) {
                         path.PISequence.push_back(*set_it);
-                        cout << "S1" << endl;
                         (*set_it)->hasTrav = true;
                     }
                 }
@@ -628,7 +627,6 @@ void Network::genPISequence(Path &path) {
          it != acSet.end(); ++it) {
         if (!(*it)->hasTrav) {
             path.PISequence.push_back(*it);
-            cout << "S2" << endl;
             (*it)->hasTrav = true;
         }
     }
@@ -637,7 +635,6 @@ void Network::genPISequence(Path &path) {
         it != start.fan_out.end(); ++it) {
         if (!(*it)->hasTrav) {
             path.PISequence.push_back(*it);
-            cout << "S3" << endl;
             (*it)->hasTrav = true;
         }
     }
