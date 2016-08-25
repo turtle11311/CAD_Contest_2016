@@ -399,8 +399,7 @@ void Network::findAllPath() {
 
 void Network::printIOMap(){
     cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ;
-            map_it != IOMap.end() ; ++map_it ){
+    for (auto map_it = IOMap.begin(); map_it != IOMap.end(); ++map_it) {
         cout << "PO's name: " << map_it->first->name << endl;
         for ( GateSet::iterator set_it = map_it->second.begin();
                 set_it != map_it->second.end() ; ++set_it ){
@@ -467,17 +466,6 @@ bool isAllOne(std::vector<int> pattern){
         if ( pattern[i] == 0 )
             return false;
     return true;
-}
-
-// just for test pattern 1 1 1 1
-void Network::forTest() {
-    GateList::iterator it = start.fan_out.begin();
-    for (; it != start.fan_out.end(); ++it){
-        (*it)->value[0] = rand() % 2;
-    }
-    evalNetwork(0);
-    evalFLTime();
-    findTruePath(0);
 }
 
 void Network::force() {
