@@ -65,7 +65,6 @@ class Network{
     GateSet findAssociatePI( Gate* );
     void topologySort();
     void addOne(std::vector<int>& pattern);
-    void forTest();
     void force();
     void printAllPaths();
     void printIOMap();

@@ -1,6 +1,7 @@
 #include "Network.h"
 #include <pthread.h>
 #include <ctime>
+#include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 using std::cout;
@@ -9,6 +10,9 @@ using std::list;
 using std::cin;
 using std::string;
 using std::setw;
+using namespace std::placeholders;
+using std::for_each;
+using std::bind;
 
 static pthread_mutex_t mutex;
 
@@ -339,10 +343,8 @@ void Network::createGraph() {
     }
 
     // release wires memory
-    for (GateMap::iterator it = wirePool.begin(); it != wirePool.end();
-            ++it) {
-        delete it->second;
-    }
+    for (auto &it : wirePool)
+        delete it.second;
 
     resetAllfan_out_it();
     delete[] module_exp;
@@ -352,21 +354,18 @@ void Network::createGraph() {
 
 // reset the fan_out_it, after the original iterator is never effect
 void Network::resetAllfan_out_it() {
-    for (GateMap::iterator it = gatePool.begin(); it != gatePool.end(); ++it){
-        it->second->fan_out_it = it->second->fan_out.begin();
-    }
+    for (auto &it : gatePool)
+        it.second->fan_out_it = it.second->fan_out.begin();
 }
 
-GateSet Network::findAssociatePI(Gate* in){
-
+GateSet Network::findAssociatePI(Gate* in) {
     GateSet PISet;
     GateList Queue;
     Queue.push_back(in);
     while( Queue.size() ){
-        for ( GateList::iterator it = Queue.front()->fan_in.begin();
-                it != Queue.front()->fan_in.end() ; ++it )
-            if ( (*it) != &start )
-                Queue.push_back(*it);
+        for ( Gate* gate : Queue.front()->fan_in )
+            if ( gate != &start )
+                Queue.push_back(gate);
         if ( Queue.front()->type == INPUT )
             PISet.insert(Queue.front());
         Queue.pop_front();
@@ -376,9 +375,8 @@ GateSet Network::findAssociatePI(Gate* in){
 
 void Network::findAllPath() {
     Path path;
-    for ( GateList::iterator it = start.fan_out.begin() ;
-            it != start.fan_out.end() ; ++it ){
-        path.push_back(*it);
+    for (Gate* inputport : start.fan_out) {
+        path.push_back(inputport);
         while (path.size()) {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
                 if (path.back()->type == OUTPUT) {
@@ -399,8 +397,7 @@ void Network::findAllPath() {
 
 void Network::printIOMap(){
     cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    for ( std::map<Gate*, GateSet>::iterator map_it = IOMap.begin() ;
-            map_it != IOMap.end() ; ++map_it ){
+    for (auto map_it = IOMap.begin(); map_it != IOMap.end(); ++map_it) {
         cout << "PO's name: " << map_it->first->name << endl;
         for ( GateSet::iterator set_it = map_it->second.begin();
                 set_it != map_it->second.end() ; ++set_it ){
@@ -412,8 +409,8 @@ void Network::printIOMap(){
 }
 
 void Network::printAllPaths() {
-    for (list<Path>::iterator it = paths.begin(); it != paths.end(); ++it)
-        printContainer(*it), cout << endl;
+    for (Path &path : paths)
+        printContainer(path), cout << endl;
 }
 
 // Generate a sequence for evaluate network value without START GATE
@@ -469,17 +466,6 @@ bool isAllOne(std::vector<int> pattern){
     return true;
 }
 
-// just for test pattern 1 1 1 1
-void Network::forTest() {
-    GateList::iterator it = start.fan_out.begin();
-    for (; it != start.fan_out.end(); ++it){
-        (*it)->value[0] = rand() % 2;
-    }
-    evalNetwork(0);
-    evalFLTime();
-    findTruePath(0);
-}
-
 void Network::force() {
     std::vector<int> pattern;
     pattern.resize(start.fan_out.size());
@@ -489,9 +475,8 @@ void Network::force() {
 
     do {
         int index = 0;
-        for (GateList::iterator it = start.fan_out.begin();
-                it != start.fan_out.end() ; ++it ){
-            (*it)->value[0] = pattern[index++];
+        for (Gate* inputport : start.fan_out) {
+            inputport->value[0] = pattern[index++];
         }
         evalNetwork(0);
         findTruePath(0);
@@ -500,40 +485,36 @@ void Network::force() {
 }
 
 void Network::findTruePath(int pid) {
-    for (list<Path>::iterator paths_it = paths.begin();
-            paths_it != paths.end(); ++paths_it)
-    {
-        short type = ((*paths_it).front())->value[pid];
-        if (paths_it->isFind[type])
+    for (Path &path : paths) {
+        short type = path.front()->value[pid];
+        if (path.isFind[type])
             continue;
         bool isTruePath = true;
-        Gate* me = paths_it->front();
-        for (Path::iterator path_it = paths_it->begin()
-                ; path_it != paths_it->end(); ++path_it)
-        {
+        Gate* me = path.front();
+        for (Gate* gate : path) {
             Gate* you;
-            if ((*path_it)->type == NAND || (*path_it)->type == NOR) {
-                if (me == (*path_it)->fan_in.front()){
-                    you = (*path_it)->fan_in.back();
+            if (gate->type == NAND || gate->type == NOR) {
+                if (me == gate->fan_in.front()){
+                    you = gate->fan_in.back();
                 }
                 else{
-                    you = (*path_it)->fan_in.front();
-                    me = (*path_it)->fan_in.back();
+                    you = gate->fan_in.front();
+                    me = gate->fan_in.back();
                 }
-                isTruePath = subFindTruePath(pid, (*path_it)->type, me, you);
+                isTruePath = subFindTruePath(pid, gate->type, me, you);
             }
             if (!isTruePath)
                 break;
-            me = (*path_it);
+            me = gate;
         }
         if (isTruePath) {
             bool Print = false;
             pthread_mutex_lock(&mutex);
-            Print = !paths_it->isFind[type];
-            paths_it->isFind[type] = true;
+            Print = !path.isFind[type];
+            path.isFind[type] = true;
             if (Print) {
                 cout << "\nPath  {  " << ++pathCounter << "  }" << endl;
-                output_format({this, pid}, *paths_it);
+                output_format({this, pid}, path);
             }
             pthread_mutex_unlock(&mutex);
         }
@@ -622,11 +603,10 @@ void Network::genPISequence(Path &path) {
     }
     //add AccosiateSeq
     GateSet acSet = findAssociatePI(path.back());
-    for (GateSet::iterator it = acSet.begin();
-         it != acSet.end(); ++it) {
-        if (!(*it)->hasTrav) {
-            path.PISequence.push_back(*it);
-            (*it)->hasTrav = true;
+    for (Gate *gate : acSet) {
+        if (!gate->hasTrav) {
+            path.PISequence.push_back(gate);
+            gate->hasTrav = true;
         }
     }
     // add remain PI
@@ -640,21 +620,19 @@ void Network::genPISequence(Path &path) {
 }
 
 void Network::genAllPISequence() {
-    for (list<Path>::iterator it = paths.begin(); it != paths.end(); ++it) {
-        genPISequence(*it);
-    }
+    for (Path &path : paths)
+        genPISequence(path);
 }
 
 // test to print  all the gate value
 void Network::test2PrintGateValue(int pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
-    for (GateMap::iterator it = gatePool.begin();
-            it != gatePool.end(); ++it){
-        cout << it->first << endl;
-        cout << "value: " << it->second->value[pid] << endl;
-        cout << "time: " << it->second->arrival_time[pid] << endl;
-        cout << "First in: " << "(" << it->second->first_in << ")" << endl;
-        cout << "Last in: " << "(" << it->second->last_in << ")" << endl;
+    for (auto &eachGate : gatePool) {
+        cout << eachGate.first << endl;
+        cout << "value: " << eachGate.second->value[pid] << endl;
+        cout << "time: " << eachGate.second->arrival_time[pid] << endl;
+        cout << "First in: " << "(" << eachGate.second->first_in << ")" << endl;
+        cout << "Last in: " << "(" << eachGate.second->last_in << ")" << endl;
     }
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
 }
@@ -689,18 +667,16 @@ void Network::evalFLTime(){
 
 // evaluate each gate's value
 void Network::evalNetwork(int pid) {
-    for (GateList::iterator it = evalSequence.begin();
-            it != evalSequence.end(); ++it)
-    {
-        (*it)->eval(pid);
-        (*it)->arrival_time[pid] = (*it)->trueinput(pid)->arrival_time[pid] + 1;
+    for (Gate* gate : evalSequence) {
+        gate->eval(pid);
+        gate->arrival_time[pid] = gate->trueinput(pid)->arrival_time[pid] + 1;
     }
 }
 
 // random test pattern
 void Network::randomInput(int pid) {
-    for (GateList::iterator it = start.fan_out.begin(); it != start.fan_out.end(); ++it){
-        (*it)->value[pid] = rand() % 2;
+    for (Gate* inputport : start.fan_out) {
+        inputport->value[pid] = rand() % 2;
     }
 }
 
@@ -726,7 +702,7 @@ void* findPatternTruePath(void *args) {
     args_t arg = *(args_t*)args;
     Network *net = arg.first;
     int ID = arg.second;
-    for(int i = 0; i < 250000; ++i) {
+    for(int i = 0; i < 100000; ++i) {
         if (net->pathCounter >= net->paths.size() * 2)
             break;
         net->random2Shrink(ID);
@@ -735,10 +711,8 @@ void* findPatternTruePath(void *args) {
 }
 
 Network::~Network() {
-    for (GateMap::iterator it = gatePool.begin(); it != gatePool.end();
-            ++it) {
-        delete it->second;
-    }
+    for (auto &it : gatePool)
+        delete it.second;
 }
 
 void Network::forwardSimulation( int pid , Gate* current ){
