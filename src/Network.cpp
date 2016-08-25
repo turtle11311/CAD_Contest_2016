@@ -3,6 +3,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iomanip>
+#include <utility>
 using std::cout;
 using std::endl;
 using std::list;
@@ -609,7 +610,7 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set = findAssociatePI(*it);
+                GateSet set = std::move(findAssociatePI(*it));
                 for (GateSet::iterator set_it = set.begin();
                      set_it != set.end(); ++set_it) {
                     if (!(*set_it)->hasTrav) {
@@ -622,17 +623,9 @@ void Network::genPISequence(Path &path) {
         me = *it;
     }
     //add AccosiateSeq
-    GateSet acSet = findAssociatePI(path.back());
+    GateSet acSet = std::move(findAssociatePI(path.back()));
     for (GateSet::iterator it = acSet.begin();
          it != acSet.end(); ++it) {
-        if (!(*it)->hasTrav) {
-            path.PISequence.push_back(*it);
-            (*it)->hasTrav = true;
-        }
-    }
-    // add remain PI
-    for (GateList::iterator it = start.fan_out.begin();
-        it != start.fan_out.end(); ++it) {
         if (!(*it)->hasTrav) {
             path.PISequence.push_back(*it);
             (*it)->hasTrav = true;
