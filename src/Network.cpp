@@ -3,7 +3,6 @@
 #include <ctime>
 #include <cstdlib>
 #include <iomanip>
-#include <utility>
 using std::cout;
 using std::endl;
 using std::list;
@@ -312,14 +311,13 @@ void Network::createGraph() {
     }
 
     // rewiring
-    for (GateMap::iterator it = wirePool.begin(); it != wirePool.end(); ++it){
-        it->second->fan_in.front()->fan_out = it->second->fan_out;
-        for (GateList::iterator wire_out_it = it->second->fan_out.begin();
-                wire_out_it != it->second->fan_out.end(); ++wire_out_it){
-            for (GateList::iterator wire_out_in_it = (*wire_out_it)->fan_in.begin();
-                    wire_out_in_it != (*wire_out_it)->fan_in.end(); ++wire_out_in_it){
-                if (it->second == (*wire_out_in_it)){
-                    (*wire_out_in_it) = it->second->fan_in.front();
+    for ( auto& eachWire : wirePool ){
+        eachWire.second->fan_in.front()->fan_out = eachWire.second->fan_out;
+        for ( Gate* wireEachFanout : eachWire.second->fan_out ){
+            for (GateList::iterator wire_out_in_it = wireEachFanout->fan_in.begin();
+                    wire_out_in_it != wireEachFanout->fan_in.end(); ++wire_out_in_it){
+                if (eachWire.second == (*wire_out_in_it)){
+                    (*wire_out_in_it) = eachWire.second->fan_in.front();
                 }
             }
         }
@@ -610,7 +608,7 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set = std::move(findAssociatePI(*it));
+                GateSet set = findAssociatePI(*it);
                 for (GateSet::iterator set_it = set.begin();
                      set_it != set.end(); ++set_it) {
                     if (!(*set_it)->hasTrav) {
@@ -623,9 +621,17 @@ void Network::genPISequence(Path &path) {
         me = *it;
     }
     //add AccosiateSeq
-    GateSet acSet = std::move(findAssociatePI(path.back()));
+    GateSet acSet = findAssociatePI(path.back());
     for (GateSet::iterator it = acSet.begin();
          it != acSet.end(); ++it) {
+        if (!(*it)->hasTrav) {
+            path.PISequence.push_back(*it);
+            (*it)->hasTrav = true;
+        }
+    }
+    // add remain PI
+    for (GateList::iterator it = start.fan_out.begin();
+        it != start.fan_out.end(); ++it) {
         if (!(*it)->hasTrav) {
             path.PISequence.push_back(*it);
             (*it)->hasTrav = true;
