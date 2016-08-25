@@ -172,6 +172,7 @@ Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
       pathCounter(0), minimun(timing - slack)
 {
     srand(time(NULL));
+    paths.reserve(1000);
 }
 
 Gate *Network::findGateByName(const char *name) {
@@ -384,7 +385,7 @@ void Network::findAllPath() {
                 if (path.back()->type == OUTPUT) {
                     if (path.size() - 2ul > minimun) {
                         IOMap[path.back()].insert(path.front());
-                        paths.push_back(path);
+                        paths.push_back(new Path(path));
                     }
                 }
                 path.back()->fan_out_it = path.back()->fan_out.begin();
@@ -411,8 +412,8 @@ void Network::printIOMap(){
 }
 
 void Network::printAllPaths() {
-    for (Path &path : paths)
-        printContainer(path), cout << endl;
+    for (Path* path : paths)
+        printContainer(*path), cout << endl;
 }
 
 // Generate a sequence for evaluate network value without START GATE
@@ -487,13 +488,13 @@ void Network::force() {
 }
 
 void Network::findTruePath(int pid) {
-    for (Path &path : paths) {
-        short type = path.front()->value[pid];
-        if (path.isFind[type])
+    for (Path* path : paths) {
+        short type = path->front()->value[pid];
+        if (path->isFind[type])
             continue;
         bool isTruePath = true;
-        Gate* me = path.front();
-        for (Gate* gate : path) {
+        Gate* me = path->front();
+        for (Gate* gate : *path) {
             Gate* you;
             if (gate->type == NAND || gate->type == NOR) {
                 if (me == gate->fan_in.front()){
@@ -512,11 +513,11 @@ void Network::findTruePath(int pid) {
         if (isTruePath) {
             bool Print = false;
             pthread_mutex_lock(&mutex);
-            Print = !path.isFind[type];
-            path.isFind[type] = true;
+            Print = !path->isFind[type];
+            path->isFind[type] = true;
             if (Print) {
                 cout << "\nPath  {  " << ++pathCounter << "  }" << endl;
-                output_format({this, pid}, path);
+                output_format({this, pid}, *path);
             }
             pthread_mutex_unlock(&mutex);
         }
@@ -614,8 +615,8 @@ void Network::genPISequence(Path &path) {
 }
 
 void Network::genAllPISequence() {
-    for (Path &path : paths)
-        genPISequence(path);
+    for (Path* path : paths)
+        genPISequence(*path);
 }
 
 // test to print  all the gate value
@@ -705,6 +706,11 @@ void* findPatternTruePath(void *args) {
 }
 
 Network::~Network() {
+    // release all Path
+    for (Path* path : paths)
+        delete path;
+
+    // release all Gate
     for (auto &it : gatePool)
         delete it.second;
 }

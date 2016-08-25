@@ -46,12 +46,12 @@ class Network{
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
     std::string moduleName;
+    int pathCounter;
+    unsigned int minimun;
     GateMap gatePool;
     GateMap wirePool;
     GateList evalSequence;
-    std::list<Path> paths;
-    int pathCounter;
-    unsigned int minimun;
+    std::vector<Path*> paths;
     std::map<Gate*,GateSet> IOMap;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
