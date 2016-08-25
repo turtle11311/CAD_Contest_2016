@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iomanip>
-#include <utility>
 using std::cout;
 using std::endl;
 using std::list;
@@ -317,14 +316,13 @@ void Network::createGraph() {
     }
 
     // rewiring
-    for (GateMap::iterator it = wirePool.begin(); it != wirePool.end(); ++it){
-        it->second->fan_in.front()->fan_out = it->second->fan_out;
-        for (GateList::iterator wire_out_it = it->second->fan_out.begin();
-                wire_out_it != it->second->fan_out.end(); ++wire_out_it){
-            for (GateList::iterator wire_out_in_it = (*wire_out_it)->fan_in.begin();
-                    wire_out_in_it != (*wire_out_it)->fan_in.end(); ++wire_out_in_it){
-                if (it->second == (*wire_out_in_it)){
-                    (*wire_out_in_it) = it->second->fan_in.front();
+    for ( auto& eachWire : wirePool ){
+        eachWire.second->fan_in.front()->fan_out = eachWire.second->fan_out;
+        for ( Gate* wireEachFanout : eachWire.second->fan_out ){
+            for (GateList::iterator wire_out_in_it = wireEachFanout->fan_in.begin();
+                    wire_out_in_it != wireEachFanout->fan_in.end(); ++wire_out_in_it){
+                if (eachWire.second == (*wire_out_in_it)){
+                    (*wire_out_in_it) = eachWire.second->fan_in.front();
                 }
             }
         }
@@ -610,6 +608,14 @@ void Network::genPISequence(Path &path) {
         if (!gate->hasTrav) {
             path.PISequence.push_back(gate);
             gate->hasTrav = true;
+        }
+    }
+    // add remain PI
+    for (GateList::iterator it = start.fan_out.begin();
+        it != start.fan_out.end(); ++it) {
+        if (!(*it)->hasTrav) {
+            path.PISequence.push_back(*it);
+            (*it)->hasTrav = true;
         }
     }
 }
