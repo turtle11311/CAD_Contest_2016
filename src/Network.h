@@ -81,4 +81,6 @@ class Network{
     char* getExpression();
     void parallelFindTruePath();
     void evalFLTime();
+
+    void forwardSimulation( int pid, Gate* );
 };

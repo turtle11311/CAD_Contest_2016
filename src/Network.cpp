@@ -720,3 +720,37 @@ Network::~Network() {
     for (auto &it : gatePool)
         delete it.second;
 }
+
+void Network::forwardSimulation( int pid , Gate* current ){
+
+    for ( auto cur_fan_out : current->fan_out )
+        if ( cur_fan_out->value[pid] != -1  )
+            return;
+
+    if ( current->type == NOT || current->type == OUTPUT ){
+        current->value[pid] = (current->type == NOT)?
+                        !current->fan_in.front()->value[pid] :
+                        current->fan_in.front()->value[pid];
+        for ( auto cur_fan_out : current->fan_out )
+            forwardSimulation(pid,cur_fan_out);
+    }
+
+    else if ( current->type == NOR || current->type == NAND ){
+        int ctrlValue = ( current->type == NOR );
+        if ( current->fan_in.front()->value[pid] == ctrlValue ||
+            current->fan_in.back()->value[pid] == ctrlValue ){
+            current->value[pid] = !ctrlValue;
+            for ( auto cur_fan_out : current->fan_out )
+                forwardSimulation(pid,cur_fan_out);
+        }
+        else if ( current->fan_in.front()->value[pid] == -1 ||
+                current->fan_in.back()->value[pid] == -1 ){
+            return;
+        }
+        else{
+            current->value[pid] = ctrlValue;
+            for ( auto cur_fan_out : current->fan_out )
+                forwardSimulation(pid,cur_fan_out);
+        }
+    }
+}
