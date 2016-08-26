@@ -97,7 +97,7 @@ void output_format(args_t arg, Path &path) {
                 cout << "f\n";
 
             cout << std::left << setw(44);
-            buf += (*it)->name;
+            buf = "    " + (*it)->name;
             buf+="/Y (";
 
             switch((*it)->type)
