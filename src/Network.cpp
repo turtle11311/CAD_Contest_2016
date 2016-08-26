@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <ctime>
 #include <algorithm>
+#include <functional>
 #include <cstdlib>
 #include <iomanip>
 using std::cout;
@@ -45,58 +46,49 @@ Path::Path() : isFind{false, false}
 void output_format(args_t arg, Path &path) {
     Network *net = arg.first;
     int pid = arg.second;
-    cout << "\nA True Path List\n{\n"
-        << "---------------------------------------------------------------------------\n"
-        << "Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
-        << "---------------------------------------------------------------------------\n";
+    cout << "\n    A True Path List\n    {\n"
+        << "    ---------------------------------------------------------------------------\n"
+        << "    Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
+        << "    ---------------------------------------------------------------------------\n";
     int constrain = net->timing;
     GateList::iterator it = path.begin();
     GateList::iterator temp;
-    GateType pattern_type;
     int slack_time = 0;
-    std::string buf;
+    string buf;
     for (; it != path.end(); ++it){
-        if ((*it)->type == 5 || (*it)->type == 6){
+        buf = "    ";
+        if ((*it)->type == INPUT || (*it)->type == OUTPUT){
             cout << std::left << setw(44);
-            buf = (*it)->name + " (";
-            switch((*it)->type)
-            {
-                case 5:
-                    buf+="in)";
-                    break;
-                case 6:
-                    buf+="out)";
-                    break;
-            }
+            buf += (*it)->name + " " + ((*it)->type == INPUT ? "(in)" : "(out)");
             cout << buf << setw(11) << "0" << (*it)->arrival_time[pid] - ((*it)->type == OUTPUT) << " ";
             if((*it)->value[pid])
                 cout << "r\n";
             else
                 cout << "f\n";
-        }
-
-        if ((*it)->type != 5 && (*it)->type != 6){
+        } else {
             cout << std::left << setw(44);
-            buf = (*it)->name;
+            buf += (*it)->name;
             if(*temp == (*it)->fan_in.front())
                 buf+="/A (";
             else
                 buf+="/B (";
             switch((*it)->type)
             {
-                case 1:
+                case NOT:
                     buf+="NOT";
                     break;
-                case 2:
+                case NOR:
                     buf+="NOR";
                     break;
-                case 3:
+                case NAND:
                     buf+="NAND";
                     break;
+                default:
+                    break;
             }
-            if ((*it)->type == 1)
+            if ((*it)->type == NOT)
                 buf+="1)";
-            else if ((*it)->type == 2 || (*it)->type == 3)
+            else if ((*it)->type == NOR || (*it)->type == NAND)
                 buf+="2)";
             cout << buf << setw(11) << "0" << (*temp)->arrival_time[pid]  << " ";
             if((*temp)->value[pid])
@@ -105,24 +97,26 @@ void output_format(args_t arg, Path &path) {
                 cout << "f\n";
 
             cout << std::left << setw(44);
-            buf = (*it)->name;
+            buf += (*it)->name;
             buf+="/Y (";
 
             switch((*it)->type)
             {
-                case 1:
+                case NOT:
                     buf+="NOT";
                     break;
-                case 2:
+                case NOR:
                     buf+="NOR";
                     break;
-                case 3:
+                case NAND:
                     buf+="NAND";
                     break;
+                default:
+                    break;
             }
-            if ((*it)->type == 1)
+            if ((*it)->type == NOT)
                 buf+="1)";
-            else if ((*it)->type == 2 || (*it)->type == 3)
+            else if ((*it)->type == NOR || (*it)->type == NAND)
                 buf+="2)";
             cout << buf << setw(11) << "1" << (*it)->arrival_time[pid]  << " ";
             if((*it)->value[pid])
@@ -133,16 +127,16 @@ void output_format(args_t arg, Path &path) {
         }
         temp = it;
     }
-    cout << "--------------------------------------------------------------------------\n"
-        << setw(30) << "Data Required Time"  << constrain << endl;
-    cout << setw(30)  << "Data Arrival Time" ;
+    cout << "    --------------------------------------------------------------------------\n"
+        << setw(30) << "    Data Required Time"  << constrain << endl;
+    cout << setw(30)  << "    Data Arrival Time" ;
     cout << slack_time << endl <<
-        "--------------------------------------------------------------------------\n";
-    cout << setw(30) << "Slack"   << constrain - slack_time << "\n}\n\n"
-        << "Input Vector\n{\n";
-    for (GateList::iterator it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
+        "    --------------------------------------------------------------------------\n";
+    cout << setw(30) << "    Slack"   << constrain - slack_time << "\n    }\n\n"
+        << "    Input Vector\n    {\n";
+    for (auto it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
     {
-        cout << (*it)->name << " = ";
+        cout << "\t" << (*it)->name << " = ";
         if(*it == *(path.begin()))
         {
             if((*it)->value[pid])
@@ -153,7 +147,7 @@ void output_format(args_t arg, Path &path) {
         else
             cout << (*it)->value[pid] << endl;
     }
-    cout << "}\n";
+    cout << "    }\n";
 }
 
 char *Network::getExpression() {
