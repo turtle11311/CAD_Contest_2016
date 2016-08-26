@@ -39,7 +39,7 @@ void getTokens(list<char *> &tokens, char *src) {
     } while (tok);
 }
 
-Path::Path() : isFind({false, false})
+Path::Path() : isFind{false, false}
 {}
 
 void output_format(args_t arg, Path &path) {
@@ -394,6 +394,8 @@ void Network::findAllPath() {
             }
         }
     }
+    std::sort(paths.begin(), paths.end(), [](const Path *a, const Path *b)
+    { return a->size() < b->size(); });
 }
 
 void Network::printIOMap(){
