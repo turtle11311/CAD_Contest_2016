@@ -706,32 +706,40 @@ Network::~Network() {
 
 void Network::forwardSimulation( int pid , Gate* current ){
 
-    for ( auto cur_fan_out : current->fan_out )
-        if ( cur_fan_out->value[pid] != -1  )
-            return;
+    if (current->value[pid] != -1)
+        return;
 
     if ( current->type == NOT || current->type == OUTPUT ){
         current->value[pid] = (current->type == NOT)?
                         !current->fan_in.front()->value[pid] :
                         current->fan_in.front()->value[pid];
+        int av = current->fan_in.front()->arrival_time[pid];
+        if (!~av)
+            current->arrival_time[pid] = av;
         for ( auto cur_fan_out : current->fan_out )
             forwardSimulation(pid,cur_fan_out);
-    }
-
-    else if ( current->type == NOR || current->type == NAND ){
+    } else if ( current->type == NOR || current->type == NAND ){
         int ctrlValue = ( current->type == NOR );
         if ( current->fan_in.front()->value[pid] == ctrlValue ||
             current->fan_in.back()->value[pid] == ctrlValue ){
             current->value[pid] = !ctrlValue;
+            int cav = current->ctrlinput(pid)->arrival_time[pid];
+            if (!~cav)
+                current->arrival_time[pid] = cav + 1;
             for ( auto cur_fan_out : current->fan_out )
                 forwardSimulation(pid,cur_fan_out);
         }
         else if ( current->fan_in.front()->value[pid] == -1 ||
-                current->fan_in.back()->value[pid] == -1 ){
+                current->fan_in.back()->value[pid] == -1 ) {
             return;
         }
-        else{
+        else {
             current->value[pid] = ctrlValue;
+            int i1 = current->front()->arrival_time[pid];
+            int i2 = current->back()->arrival_time[pid];
+            if ( i1 != -1 && i2 != -1)
+                current->arrival_time[pid] = std::max(i1, i2);
+
             for ( auto cur_fan_out : current->fan_out )
                 forwardSimulation(pid,cur_fan_out);
         }

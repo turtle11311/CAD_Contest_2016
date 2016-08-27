@@ -13,6 +13,8 @@ public:
     Gate(std::string name = "", GateType type = NONE);
     void eval(int pid);
     Gate* trueinput(int pid);
+    Gate* ctrlinput(int pid);
+    short inline ctrlValue() { return type == NOR; }
     std::string name;
     GateList fan_in;
     GateList fan_out;

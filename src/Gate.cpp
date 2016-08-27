@@ -4,16 +4,29 @@ Gate::Gate(std::string name, GateType type)
     : name(name), type(type), value{-1,-1,-1,-1}, arrival_time{-1,-1,-1,-1},
       hasTrav(false) , first_in(0) , last_in(0) {}
 
-    void Gate::eval(int pid){
-        if (type == NOT)
-            value[pid] = !fan_in.front()->value[pid];
-        else if (type == NAND)
-            value[pid] = (!fan_in.front()->value[pid]) || (!fan_in.back()->value[pid]);
-        else if (type == NOR)
-            value[pid] = (!fan_in.front()->value[pid]) && (!fan_in.back()->value[pid]);
-        else if (type == OUTPUT)
-            value[pid] = fan_in.front()->value[pid];
-    }
+void Gate::eval(int pid){
+    if (type == NOT)
+        value[pid] = !fan_in.front()->value[pid];
+    else if (type == NAND)
+        value[pid] = (!fan_in.front()->value[pid]) || (!fan_in.back()->value[pid]);
+    else if (type == NOR)
+        value[pid] = (!fan_in.front()->value[pid]) && (!fan_in.back()->value[pid]);
+    else if (type == OUTPUT)
+        value[pid] = fan_in.front()->value[pid];
+}
+
+
+Gate* Gate::ctrlinput(int pid) {
+    Gate *ret = NULL;
+    Gate *A = fan_in.front();
+    Gate *B = fan_in.back();
+    if ((A->value[pid] == ctrlValue() && B->value[pid] != ctrlValue()) ||
+        (A->value[pid] == ctrlValue() && A->arrival_time[pid] < B->arrival_time[pid]))
+        ret = A;
+    else
+        ret = B;
+    return ret;
+}
 Gate* Gate::trueinput(int pid) {
     Gate *ret = NULL;
     Gate *A = fan_in.front();
