@@ -78,7 +78,7 @@ class Network{
     void printAllPaths();
     void printIOMap();
     void random2Shrink(int pid);
-    void findTruePath(int pid);
+    void findAllTruePath(int pid);
     void test2PrintGateValue(int pid);
     void genPISequence(Path &path);
     void genAllPISequence();

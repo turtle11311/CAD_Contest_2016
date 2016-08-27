@@ -426,7 +426,7 @@ void Network::topologySort() {
 void Network::random2Shrink(int pid){
     randomInput(pid);
     evalNetwork(pid);
-    findTruePath(pid);
+    findAllTruePath(pid);
 }
 
 // pattern + 1
@@ -463,12 +463,12 @@ void Network::force() {
             inputport->value[0] = pattern[index++];
         }
         evalNetwork(0);
-        findTruePath(0);
+        findAllTruePath(0);
         addOne(pattern);
     }while(!isAllOne(pattern));
 }
 
-void Network::findTruePath(int pid) {
+void Network::findAllTruePath(int pid) {
     for (Path* path : paths) {
         short type = path->front()->value[pid];
         if (path->isFind[type])
@@ -714,8 +714,8 @@ void Network::forwardSimulation( int pid , Gate* current ){
                         !current->fan_in.front()->value[pid] :
                         current->fan_in.front()->value[pid];
         int av = current->fan_in.front()->arrival_time[pid];
-        if (!~av)
-            current->arrival_time[pid] = av;
+        if (~av)
+            current->arrival_time[pid] = av + 1;
         for ( auto cur_fan_out : current->fan_out )
             forwardSimulation(pid,cur_fan_out);
     } else if ( current->type == NOR || current->type == NAND ){
@@ -724,7 +724,7 @@ void Network::forwardSimulation( int pid , Gate* current ){
             current->fan_in.back()->value[pid] == ctrlValue ){
             current->value[pid] = !ctrlValue;
             int cav = current->ctrlinput(pid)->arrival_time[pid];
-            if (!~cav)
+            if (~cav)
                 current->arrival_time[pid] = cav + 1;
             for ( auto cur_fan_out : current->fan_out )
                 forwardSimulation(pid,cur_fan_out);
@@ -735,8 +735,8 @@ void Network::forwardSimulation( int pid , Gate* current ){
         }
         else {
             current->value[pid] = ctrlValue;
-            int i1 = current->front()->arrival_time[pid];
-            int i2 = current->back()->arrival_time[pid];
+            int i1 = current->fan_in.front()->arrival_time[pid];
+            int i2 = current->fan_in.back()->arrival_time[pid];
             if ( i1 != -1 && i2 != -1)
                 current->arrival_time[pid] = std::max(i1, i2);
 
