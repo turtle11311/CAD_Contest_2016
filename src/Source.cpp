@@ -3,9 +3,11 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <cstdlib>
 #include <list>
 #include <string>
+#include <cstdio>
 using namespace std;
 
 int main(int argc, char const *argv[]) {
@@ -25,6 +27,14 @@ int main(int argc, char const *argv[]) {
     net.createGraph();
     net.findAllPath();
     net.topologySort();
-    net.parallelFindTruePath();
+    net.evalFLTime();
+    net.genAllPISequence();
+    for (Path* path : net.paths) {
+        net.branchAndBound(0, *path, path->PISequence.begin());
+    }
+    // auto path = *net.paths.front();
+    // net.branchAndBound(0, path, path.PISequence.begin());
+    // net.parallelFindTruePath();
+    // net.force();
     return 0;
 }

@@ -20,7 +20,8 @@ Gate* Gate::ctrlinput(int pid) {
     Gate *ret = NULL;
     Gate *A = fan_in.front();
     Gate *B = fan_in.back();
-    if ((A->value[pid] == ctrlValue() && B->value[pid] != ctrlValue()) ||
+    if ((A->arrival_time[pid] == -1) ||
+        (A->value[pid] == ctrlValue() && B->arrival_time[pid] != -1 && B->value[pid] != ctrlValue()) ||
         (A->value[pid] == ctrlValue() && A->arrival_time[pid] < B->arrival_time[pid]))
         ret = A;
     else

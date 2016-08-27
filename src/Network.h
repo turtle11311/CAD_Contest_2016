@@ -7,11 +7,13 @@
 #include <iostream>
 #include <climits>
 #include <utility>
+#include <tuple>
 class Network;
 class Path;
 typedef std::map<std::string, Gate*> GateMap;
 typedef std::set<Gate*> GateSet;
 typedef std::pair<Network*, int> args_t;
+typedef std::list<std::tuple<Gate*, int, int>> ModifyList;
 
 template <typename Container>
 void printContainer(const Container &container) {
@@ -39,6 +41,7 @@ class Path : public GateList {
 public:
     Path();
     GateList PISequence;
+    GateList criticList;
     bool isFind[2];
 };
 
@@ -79,15 +82,19 @@ class Network{
     void printIOMap();
     void random2Shrink(int pid);
     void findAllTruePath(int pid);
+    bool isTruePath(int pid, Path &path);
     void test2PrintGateValue(int pid);
     void genPISequence(Path &path);
     void genAllPISequence();
-    bool subFindTruePath(int pid, GateType type, Gate* me, Gate* you);
+    bool subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you);
     Gate* isReady(int pid, Gate* out);
+    int branchAndBound(int pid, Path &path, GateList::iterator pos);
+    bool criticalFalse(int pid, GateList &criticList);
     void evalNetwork(int pid);
     void randomInput(int pid);
     char* getExpression();
     void parallelFindTruePath();
     void evalFLTime();
-    void forwardSimulation( int pid, Gate* );
+    void forwardSimulation(int pid, Gate* gate, ModifyList &modifyList);
+    void clearValueWithModifyList(int pid, ModifyList &modifyList);
 };
