@@ -407,8 +407,6 @@ void Network::topologySort() {
     while (stack.size()) {
         if (stack.back()->fan_out_it == stack.back()->fan_out.end()) {
             evalSequence.push_front(stack.back());
-            if (evalSequence.front()->type == INPUT)
-                evalSequence.pop_front();
             stack.pop_back();
         }
         else {
