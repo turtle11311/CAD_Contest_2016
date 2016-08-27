@@ -11,6 +11,9 @@ using std::list;
 using std::cin;
 using std::string;
 using std::setw;
+using std::vector;
+using std::map;
+
 using namespace std::placeholders;
 using std::for_each;
 using std::bind;
@@ -28,16 +31,6 @@ std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate fan out";
     printContainer(gate.fan_out);
     return out;
-}
-
-void getTokens(list<char *> &tokens, char *src) {
-    char delims[] = " ,;()";
-    tokens.clear();
-    char *tok = strtok(src, delims);
-    do {
-        tokens.push_back(tok);
-        tok = strtok(NULL, delims);
-    } while (tok);
 }
 
 Path::Path() : isFind{false, false}
@@ -246,63 +239,59 @@ void Network::createGraph() {
     // SET GATE
     //////////////////////////////////////////////////////////////////////////
     char *gate_declare;
-    char *g1, *g2, *g3;
     Gate *nowGate;
-    while (gate_declare = getExpression(),
-            strcmp("endmodule", gate_declare)) {
-        getTokens(tokens, gate_declare);
-        list<char *>::iterator lp = tokens.begin();
+    vector<char *> gate_tokens;
+    map<string, string> port;
+    gate_tokens.reserve(9);
+    while (gate_declare = getExpression(), strcmp("endmodule", gate_declare)) {
+        getTokens(gate_tokens, gate_declare);
+        auto lp = gate_tokens.begin();
         nowGate = new Gate;
-        std::advance(lp, 1);
-        nowGate->name = string(*lp);
+        nowGate->name = string(lp[1]);
         gatePool[nowGate->name] = nowGate;
-        std::advance(lp, 2);
-        g1 = *lp;
-        std::advance(lp, 2);
-        g2 = *lp;
+        port[lp[2]] = lp[3];
+        port[lp[4]] = lp[5];
         Gate *input1, *input2, *output;
-        if ((input1 = findGateByName(g1))) {
+        if ((input1 = findGateByName(port["A"].c_str()))) {
             gateWiring(input1, nowGate);
         }
         else {
             input1 = new Gate;
-            input1->name = g1;
+            input1->name = port["A"];
             gateWiring(input1, nowGate);
             wirePool[input1->name] = input1;
         }
 
-        if (!strcmp("NOT1", tokens.front())) {
+        if (!strcmp("NOT1", lp[0])) {
             nowGate->type = NOT;
-            if ((input2 = findGateByName(g2))) {
+            if ((input2 = findGateByName(port["Y"].c_str()))) {
                 gateWiring(nowGate, input2);
             }
             else {
                 input2 = new Gate;
-                input2->name = g2;
+                input2->name = port["Y"];
                 gateWiring(nowGate, input2);
                 wirePool[input2->name] = input2;
             }
         }
         else {
-            nowGate->type = (!strcmp("NOR2", tokens.front())) ? NOR : NAND;
-            if ((input2 = findGateByName(g2))) {
+            port[lp[6]] = lp[7];
+            nowGate->type = (!strcmp("NOR2", lp[0]) ? NOR : NAND);
+            if ((input2 = findGateByName(port["B"].c_str()))) {
                 gateWiring(input2, nowGate);
             }
             else {
                 input2 = new Gate;
-                input2->name = g2;
+                input2->name = port["B"];
                 gateWiring(input2, nowGate);
                 wirePool[input2->name] = input2;
             }
-
-            std::advance(lp, 2);
-            g3 = *lp;
-            if ((output = findGateByName(g3))) {
+            if ((output = findGateByName(port["Y"].c_str()))) {
                 gateWiring(nowGate, output);
             }
             else {
                 output = new Gate;
-                output->name = g3;
+                output->name = port["Y"];
                 gateWiring(nowGate, output);
                 wirePool[output->name] = output;
             }

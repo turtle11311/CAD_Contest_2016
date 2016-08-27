@@ -24,7 +24,16 @@ void printContainer(const Container &container) {
     std::cout << " )";
 }
 
-void getTokens(std::list<char *> &tokens, char *src);
+template <typename Container>
+void getTokens(Container &tokens, char *src) {
+    char delims[] = " ,.;()";
+    tokens.clear();
+    char *tok = strtok(src, delims);
+    do {
+        tokens.push_back(tok);
+        tok = strtok(NULL, delims);
+    } while (tok);
+}
 
 class Path : public GateList {
 public:
