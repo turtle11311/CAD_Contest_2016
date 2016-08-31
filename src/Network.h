@@ -66,7 +66,7 @@ class Network{
     GateMap wirePool;
     GateList evalSequence;
     std::vector<Path*> paths;
-    std::map<Gate*,GateSet> IOMap;
+    std::map<Gate*,GateList> IOMap;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
             std::istream &in = std::cin);

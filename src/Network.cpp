@@ -369,7 +369,7 @@ void Network::findAllPath() {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
                 if (path.back()->type == OUTPUT) {
                     if (path.size() - 2ul > minimun) {
-                        IOMap[path.back()].insert(path.front());
+                        IOMap[path.back()].push_back(path.front());
                         paths.push_back(new Path(path));
                     }
                 }
@@ -389,9 +389,9 @@ void Network::printIOMap(){
     cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
     for (auto map_it = IOMap.begin(); map_it != IOMap.end(); ++map_it) {
         cout << "PO's name: " << map_it->first->name << endl;
-        for ( GateSet::iterator set_it = map_it->second.begin();
-                set_it != map_it->second.end() ; ++set_it ){
-            cout << (*set_it)->name << ", ";
+        for ( GateList::iterator list_it = map_it->second.begin();
+                list_it != map_it->second.end() ; ++list_it ){
+            cout << (*list_it)->name << ", ";
         }
         cout << endl;
     }
@@ -588,30 +588,24 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set = findAssociatePI(*it);
                 if (you->first_in > me->last_in) {
                     path.criticList.push_back({me, (*it)->ctrlValue()});
                 } else {
                     path.criticList.push_back({you, !(*it)->ctrlValue()});
-                }
-                for (auto set_it = set.begin(); set_it != set.end(); ++set_it) {
-                    if (!(*set_it)->hasTrav) {
-                        path.PISequence.push_back(*set_it);
-                        (*set_it)->hasTrav = true;
-                    }
                 }
             }
         }
         me = *it;
     }
     //add AccosiateSeq
-    GateSet acSet = findAssociatePI(path.back());
-    for (Gate *gate : acSet) {
+    for (Gate *gate : IOMap[path.back()]) {
         if (!gate->hasTrav) {
             path.PISequence.push_back(gate);
             gate->hasTrav = true;
         }
     }
+    printContainer(path.PISequence);
+    cout << endl;
 }
 
 void Network::genAllPISequence() {

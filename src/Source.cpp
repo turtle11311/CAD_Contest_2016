@@ -37,7 +37,7 @@ int main(int argc, char const *argv[]) {
     for (Path* path : net.paths) {
         ModifyList modifyList;
         // cout << path->PISequence.front()->name << " ";
-        printContainer(path->PISequence), cout << endl;
+        // printContainer(path->PISequence), cout << endl;
         // cout << "00000000" << endl;
         // for (auto Gate : net.gatePool) {
         //     if (Gate.second->value[0] != -1 || Gate.second->arrival_time[0] != -1)
