@@ -17,11 +17,9 @@ using std::setw;
 using std::vector;
 using std::map;
 using std::next;
-using namespace std::placeholders;
-using std::for_each;
-using std::bind;
+using std::move;
 
-std::mutex mutex;
+static std::mutex mutex;
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate name: " << gate.name << endl;
@@ -41,7 +39,7 @@ Path::Path() : isFind{false, false}
 
 void output_format(args_t arg, Path &path) {
     Network *net = arg.first;
-    int pid = arg.second;
+    size_t pid = arg.second;
     cout << "\nPath  {  " << ++(net->pathCounter) << "  }" << endl;
     cout << "\n    A True Path List\n    {\n"
         << "    ---------------------------------------------------------------------------\n"
@@ -133,7 +131,7 @@ void output_format(args_t arg, Path &path) {
         << "    Input Vector\n    {\n";
     for (auto it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
     {
-        cout << "\t" << (*it)->name << " = ";
+        cout << "        " << (*it)->name << " = ";
         if(*it == *(path.begin()))
         {
             if((*it)->value[pid])
@@ -142,9 +140,14 @@ void output_format(args_t arg, Path &path) {
                 cout << "f\n";
         }
         else
-            cout << (*it)->value[pid] << endl;
+            cout << (~(*it)->value[pid] ? (*it)->value[pid] : rand() % 2) << endl;
     }
     cout << "    }\n";
+}
+
+void Network::startFindTruePath() {
+    cout << "Header  {  A True Path Set  }" << endl << endl;
+    cout << "Benchmark  {  " << moduleName << "  }" << endl;
 }
 
 char *Network::getExpression() {
@@ -162,7 +165,7 @@ Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
       pathCounter(0), minimun(timing - slack)
 {
     srand(time(NULL));
-    paths.reserve(1000);
+    paths.reserve(5000);
 }
 
 Gate *Network::findGateByName(const char *name) {
@@ -346,6 +349,11 @@ void Network::resetAllfan_out_it() {
         it.second->fan_out_it = it.second->fan_out.begin();
 }
 
+void Network::resetAllValueAndTime(size_t pid) {
+    for (auto &it : gatePool)
+        it.second->value[pid] = it.second->arrival_time[pid] = -1;
+}
+
 GateSet Network::findAssociatePI(Gate* in) {
     GateSet PISet;
     GateList Queue;
@@ -429,7 +437,7 @@ void Network::topologySort() {
     resetAllfan_out_it();
 }
 
-void Network::random2Shrink(int pid){
+void Network::random2Shrink(size_t pid){
     randomInput(pid);
     evalNetwork(pid);
     findAllTruePath(pid);
@@ -474,7 +482,7 @@ void Network::force() {
     }while(!isAllOne(pattern));
 }
 
-void Network::findAllTruePath(int pid) {
+void Network::findAllTruePath(size_t pid) {
     for (Path* path : paths) {
         short type = path->front()->value[pid];
         if (path->isFind[type])
@@ -492,7 +500,7 @@ void Network::findAllTruePath(int pid) {
     }
 }
 
-int Network::isTruePath(int pid, Path &path) {
+int Network::isTruePath(size_t pid, Path &path) {
     int ret;
     Gate* me = path.front();
     for (Gate* curGate : path) {
@@ -513,7 +521,7 @@ int Network::isTruePath(int pid, Path &path) {
 }
 
 // define both (you & me)'s arrival time == -1, means it's false path
-int Network::subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you) {
+int Network::subFindTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you) {
     int isTruePath = 1;
     // cout << curGate->name << " " << me->name << " " << you->name << endl;
     // cout << curGate->value[pid] << " " << me->value[pid] << " " << you->value[pid] << endl;
@@ -589,16 +597,14 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set;
+                GateSet set = findAssociatePI(*it);
                 if (you->first_in > me->last_in) {
                     path.criticList.push_back({me, (*it)->ctrlValue()});
-                    set = findAssociatePI(me);
                 } else {
                     path.criticList.push_back({you, !(*it)->ctrlValue()});
-                    set = findAssociatePI(you);
                 }
-                for (auto set_it = set.begin(); set_it != set.end(); ++set_it) {
-                    path.PISequence.push_back(*set_it);
+                for (auto gate : set) {
+                    path.PISequence.push_back(gate);
                 }
             }
         }
@@ -606,7 +612,7 @@ void Network::genPISequence(Path &path) {
     }
     //add AccosiateSeq
     GateSet acSet = findAssociatePI(path.back());
-    for (Gate *gate : acSet) {
+    for (auto gate : acSet) {
         path.PISequence.push_back(gate);
     }
 }
@@ -617,7 +623,7 @@ void Network::genAllPISequence() {
 }
 
 // test to print  all the gate value
-void Network::test2PrintGateValue(int pid) {
+void Network::test2PrintGateValue(size_t pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
     for (auto &eachGate : gatePool) {
         cout << eachGate.first << endl;
@@ -630,7 +636,7 @@ void Network::test2PrintGateValue(int pid) {
 }
 
 // return the last arrival fan_in, if anyone is unready return NULL
-Gate* Network::isReady(int pid, Gate* out) {
+Gate* Network::isReady(size_t pid, Gate* out) {
     Gate* temp = out->fan_in.front();
     for (GateList::iterator it = out->fan_in.begin(); it != out->fan_in.end(); ++it){
         if ((*it)->arrival_time[pid] == -1)
@@ -658,7 +664,7 @@ void Network::evalFLTime(){
 }
 
 // evaluate each gate's value
-void Network::evalNetwork(int pid) {
+void Network::evalNetwork(size_t pid) {
     for (Gate* gate : evalSequence) {
         gate->eval(pid);
         gate->arrival_time[pid] = gate->trueinput(pid)->arrival_time[pid] + 1;
@@ -666,30 +672,64 @@ void Network::evalNetwork(int pid) {
 }
 
 // random test pattern
-void Network::randomInput(int pid) {
+void Network::randomInput(size_t pid) {
     for (Gate* inputport : start.fan_out) {
         inputport->value[pid] = rand() % 2;
     }
 }
 
 void Network::parallelFindTruePath() {
-    cout << "Header  {  A True Path Set  }" << endl << endl;
-    cout << "Benchmark  {  " << moduleName << "  }" << endl;
-    std::thread threads[4];
-    for (int i = 0; i < 4; ++i) {
+    std::thread threads[ThreadNumber];
+    for (size_t i = 0; i < ThreadNumber; ++i) {
         threads[i] = std::thread(&Network::findPatternTruePath, this, i);
     }
-    for (int i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < ThreadNumber; ++i) {
         threads[i].join();
     }
 }
 
-void Network::findPatternTruePath(int pid) {
+void Network::parallelBranchAndBound() {
+    std::thread threads[ThreadNumber];
+    for (size_t i = 0; i < ThreadNumber; ++i) {
+        threads[i] = std::thread(&Network::branchAndBoundThreading, this, i);
+    }
+    for (size_t i = 0; i < ThreadNumber; ++i) {
+        threads[i].join();
+    }
+}
+
+void Network::branchAndBoundThreading(size_t pid) {
+    for (size_t i = pid; i < paths.size(); i += ThreadNumber) {
+        branchAndBoundOnePath(pid, *paths[i]);
+    }
+}
+
+void Network::findPatternTruePath(size_t pid) {
     for(int i = 0; i < 100000; ++i) {
         if (pathCounter >= paths.size() * 2)
             break;
         random2Shrink(pid);
     }
+}
+
+void Network::branchAndBoundOnePath(size_t pid, Path &path) {
+    ModifyList modifyList;
+    path.PISequence.front()->arrival_time[pid] = 0;
+    path.PISequence.front()->value[pid] = 0;
+    for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
+        forwardSimulation(pid, nowPIFanOut, modifyList);
+    }
+    branchAndBound(pid, path, ++path.PISequence.begin());
+    resetLastStatusWithModifyList(pid, modifyList);
+    modifyList.clear();
+    path.PISequence.front()->value[pid] = 1;
+    for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
+        forwardSimulation(pid, nowPIFanOut, modifyList);
+    }
+    branchAndBound(pid, path, ++path.PISequence.begin());
+    resetLastStatusWithModifyList(pid, modifyList);
+    path.PISequence.front()->value[pid] = -1;
+    path.PISequence.front()->arrival_time[pid] = -1;
 }
 
 Network::~Network() {
@@ -702,14 +742,11 @@ Network::~Network() {
         delete it.second;
 }
 
-void Network::forwardSimulation( int pid , Gate* current, ModifyList &modifyList) {
-
-    Gate *APort = current->fan_in.front();
-    Gate *BPort = current->fan_in.back();
+void Network::forwardSimulation(size_t pid , Gate* current, ModifyList &modifyList) {
     if (current->value[pid] != -1 &&
         current->arrival_time[pid] != -1)
         return;
-    modifyList.push_front(
+    modifyList.emplace_front(
         std::make_tuple(current, current->arrival_time[pid], current->value[pid]));
     if ( current->type == NOT || current->type == OUTPUT ){
         current->value[pid] = (current->type == NOT)?
@@ -752,14 +789,16 @@ void Network::forwardSimulation( int pid , Gate* current, ModifyList &modifyList
 }
 
 // if find trupath => 1; bound => 0; default => -1
-int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
+int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
     ModifyList modifyList;
     int type = path.front()->value[pid];
     int bound = -1;
     if (pos == path.PISequence.end()) {
         if (!path.isFind[type] && isTruePath(pid, path) == 1) {
             path.isFind[type] = true;
+            mutex.lock();
             output_format({this, pid}, path);
+            mutex.unlock();
             return 1;
         }
         return -1;
@@ -776,7 +815,7 @@ int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
         bound = branchAndBound(pid, path, next(pos));
-        clearValueWithModifyList(pid, modifyList);
+        resetLastStatusWithModifyList(pid, modifyList);
         modifyList.clear();
     }
     (*pos)->value[pid] = 1;
@@ -785,14 +824,14 @@ int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
         bound = branchAndBound(pid, path, next(pos));
-        clearValueWithModifyList(pid, modifyList);
+        resetLastStatusWithModifyList(pid, modifyList);
     }
     (*pos)->value[pid] = -1;
     (*pos)->arrival_time[pid] = -1;
     return bound;
 }
 
-bool Network::criticalFalse(int pid, CriticalList &criticList) {
+bool Network::criticalFalse(size_t pid, CriticalList &criticList) {
     for (auto criGate : criticList) {
         if (~criGate.first->value[pid] &&
             criGate.first->value[pid] != criGate.second)
@@ -801,7 +840,7 @@ bool Network::criticalFalse(int pid, CriticalList &criticList) {
     return false;
 }
 
-void Network::clearValueWithModifyList(int pid, ModifyList &modifyList) {
+void Network::resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList) {
     using std::get;
     for (auto &curGate : modifyList) {
         get<0>(curGate)->arrival_time[pid] = get<1>(curGate);

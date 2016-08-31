@@ -1,4 +1,5 @@
 #pragma once
+#include "config.hpp"
 #include "Gate.h"
 #include <map>
 #include <list>
@@ -12,7 +13,7 @@ class Network;
 class Path;
 typedef std::map<std::string, Gate*> GateMap;
 typedef std::set<Gate*> GateSet;
-typedef std::pair<Network*, int> args_t;
+typedef std::pair<Network*, size_t> args_t;
 typedef std::list<std::tuple<Gate*, int, int>> ModifyList;
 typedef std::list<std::pair<Gate*, short>> CriticalList;
 
@@ -71,32 +72,37 @@ class Network{
             std::istream &in = std::cin);
     ~Network();
     Gate *findGateByName(const char *name);
+    char* getExpression();
     void gateWiring(Gate *input, Gate *output);
     void createGraph();
     void findAllPath();
     void resetAllfan_out_it();
+    void resetAllValueAndTime(size_t pid);
     GateSet findAssociatePI( Gate* );
     void topologySort();
     void addOne(std::vector<int>& pattern);
     void force();
     void printAllPaths();
     void printIOMap();
-    void random2Shrink(int pid);
-    void findAllTruePath(int pid);
-    int isTruePath(int pid, Path &path);
-    void test2PrintGateValue(int pid);
+    void random2Shrink(size_t pid);
+    void findAllTruePath(size_t pid);
+    int isTruePath(size_t pid, Path &path);
+    void test2PrintGateValue(size_t pid);
     void genPISequence(Path &path);
     void genAllPISequence();
-    int subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you);
-    Gate* isReady(int pid, Gate* out);
-    int branchAndBound(int pid, Path &path, GateList::iterator pos);
-    bool criticalFalse(int pid, CriticalList &criticList);
-    void evalNetwork(int pid);
-    void randomInput(int pid);
-    char* getExpression();
+    int subFindTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
+    Gate* isReady(size_t pid, Gate* out);
+    bool criticalFalse(size_t pid, CriticalList &criticList);
+    void evalNetwork(size_t pid);
+    void randomInput(size_t pid);
     void parallelFindTruePath();
-    void findPatternTruePath(int pid);
+    void parallelBranchAndBound();
+    void branchAndBoundThreading(size_t pid);
+    void findPatternTruePath(size_t pid);
+    void branchAndBoundOnePath(size_t pid, Path &path);
+    int branchAndBound(size_t pid, Path &path, GateList::iterator pos);
     void evalFLTime();
-    void forwardSimulation(int pid, Gate* gate, ModifyList &modifyList);
-    void clearValueWithModifyList(int pid, ModifyList &modifyList);
+    void forwardSimulation(size_t pid, Gate* gate, ModifyList &modifyList);
+    void resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList);
+    void startFindTruePath();
 };
