@@ -352,10 +352,12 @@ GateSet Network::findAssociatePI(Gate* in) {
     Queue.push_back(in);
     while( Queue.size() ){
         for ( Gate* gate : Queue.front()->fan_in )
-            if ( gate != &start )
+            if (!gate->hasTrav && gate != &start) {
                 Queue.push_back(gate);
+            }
         if ( Queue.front()->type == INPUT )
             PISet.insert(Queue.front());
+        Queue.front()->hasTrav = true;
         Queue.pop_front();
     }
     return PISet;
@@ -568,9 +570,8 @@ int Network::subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you) {
 
 void Network::genPISequence(Path &path) {
     Gate* me = path.front();
-    for (GateList::iterator it = start.fan_out.begin();
-        it != start.fan_out.end(); ++it) {
-        (*it)->hasTrav = false;
+    for (auto gate : gatePool) {
+        gate.second->hasTrav = false;
     }
     path.front()->hasTrav = true;
     path.PISequence.push_back(path.front());
@@ -588,17 +589,16 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
-                GateSet set = findAssociatePI(*it);
+                GateSet set;
                 if (you->first_in > me->last_in) {
                     path.criticList.push_back({me, (*it)->ctrlValue()});
+                    set = findAssociatePI(me);
                 } else {
                     path.criticList.push_back({you, !(*it)->ctrlValue()});
+                    set = findAssociatePI(you);
                 }
                 for (auto set_it = set.begin(); set_it != set.end(); ++set_it) {
-                    if (!(*set_it)->hasTrav) {
-                        path.PISequence.push_back(*set_it);
-                        (*set_it)->hasTrav = true;
-                    }
+                    path.PISequence.push_back(*set_it);
                 }
             }
         }
@@ -607,10 +607,7 @@ void Network::genPISequence(Path &path) {
     //add AccosiateSeq
     GateSet acSet = findAssociatePI(path.back());
     for (Gate *gate : acSet) {
-        if (!gate->hasTrav) {
-            path.PISequence.push_back(gate);
-            gate->hasTrav = true;
-        }
+        path.PISequence.push_back(gate);
     }
 }
 

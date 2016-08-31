@@ -30,44 +30,44 @@ int main(int argc, char const *argv[]) {
     cout << "All Path Complete" << endl;
     net.topologySort();
     cout << "TopologySort Complete" << endl;
-    // net.evalFLTime();
-    // cout << "FLtime Complete" << endl;
-    // net.genAllPISequence();
-    // cout << "PISequnece Complete" << endl;
-    // for (Path* path : net.paths) {
-    //     ModifyList modifyList;
-    //     // cout << path->PISequence.front()->name << " ";
-    //     printContainer(path->PISequence), cout << endl;
-    //     // cout << "00000000" << endl;
-    //     // for (auto Gate : net.gatePool) {
-    //     //     if (Gate.second->value[0] != -1 || Gate.second->arrival_time[0] != -1)
-    //     //         cout << Gate.second->name << " ";
-    //     // }
-    //     // cout << endl;
-    //     path->PISequence.front()->arrival_time[0] = 0;
-    //     path->PISequence.front()->value[0] = 0;
-    //     for (Gate *nowPIFanOut : path->PISequence.front()->fan_out) {
-    //         net.forwardSimulation(0, nowPIFanOut, modifyList);
-    //     }
-    //     net.branchAndBound(0, *path, ++path->PISequence.begin());
-    //     net.clearValueWithModifyList(0, modifyList);
-    //     modifyList.clear();
-    //     // cout << "11111111" << endl;
-    //     // for (auto Gate : net.gatePool) {
-    //     //     if (Gate.second->value[0] != -1 || Gate.second->arrival_time[0] != -1)
-    //     //         cout << Gate.second->name << " ";
-    //     // }
-    //     // cout << endl;
-    //     path->PISequence.front()->value[0] = 1;
-    //     for (Gate *nowPIFanOut : path->PISequence.front()->fan_out) {
-    //         net.forwardSimulation(0, nowPIFanOut, modifyList);
-    //     }
-    //     net.branchAndBound(0, *path, ++path->PISequence.begin());
-    //     net.clearValueWithModifyList(0, modifyList);
-    //     path->PISequence.front()->value[0] = -1;
-    //     path->PISequence.front()->arrival_time[0] = -1;
-    // }
-    net.parallelFindTruePath();
+    net.evalFLTime();
+    cout << "FLtime Complete" << endl;
+    net.genAllPISequence();
+    cout << "PISequnece Complete" << endl;
+    for (Path* path : net.paths) {
+        ModifyList modifyList;
+        cout << path->PISequence.front()->name << " ";
+        printContainer(path->PISequence), cout << endl;
+        // cout << "00000000" << endl;
+        // for (auto Gate : net.gatePool) {
+        //     if (Gate.second->value[0] != -1 || Gate.second->arrival_time[0] != -1)
+        //         cout << Gate.second->name << " ";
+        // }
+        // cout << endl;
+        path->PISequence.front()->arrival_time[0] = 0;
+        path->PISequence.front()->value[0] = 0;
+        for (Gate *nowPIFanOut : path->PISequence.front()->fan_out) {
+            net.forwardSimulation(0, nowPIFanOut, modifyList);
+        }
+        net.branchAndBound(0, *path, ++path->PISequence.begin());
+        net.clearValueWithModifyList(0, modifyList);
+        modifyList.clear();
+        // cout << "11111111" << endl;
+        // for (auto Gate : net.gatePool) {
+        //     if (Gate.second->value[0] != -1 || Gate.second->arrival_time[0] != -1)
+        //         cout << Gate.second->name << " ";
+        // }
+        // cout << endl;
+        path->PISequence.front()->value[0] = 1;
+        for (Gate *nowPIFanOut : path->PISequence.front()->fan_out) {
+            net.forwardSimulation(0, nowPIFanOut, modifyList);
+        }
+        net.branchAndBound(0, *path, ++path->PISequence.begin());
+        net.clearValueWithModifyList(0, modifyList);
+        path->PISequence.front()->value[0] = -1;
+        path->PISequence.front()->arrival_time[0] = -1;
+    }
+    // net.parallelFindTruePath();
     // net.force();
     return 0;
 }
