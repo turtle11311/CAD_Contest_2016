@@ -490,7 +490,8 @@ void Network::findAllTruePath(int pid) {
     }
 }
 
-bool Network::isTruePath(int pid, Path &path) {
+int Network::isTruePath(int pid, Path &path) {
+    int ret;
     Gate* me = path.front();
     for (Gate* curGate : path) {
         Gate* you;
@@ -501,8 +502,8 @@ bool Network::isTruePath(int pid, Path &path) {
                 you = curGate->fan_in.front();
                 me = curGate->fan_in.back();
             }
-            if (!subFindTruePath(pid, curGate, me, you))
-                return false;
+            if ((ret = subFindTruePath(pid, curGate, me, you)) != 1)
+                return ret;
         }
         me = curGate;
     }
@@ -510,10 +511,16 @@ bool Network::isTruePath(int pid, Path &path) {
 }
 
 // define both (you & me)'s arrival time == -1, means it's false path
-bool Network::subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you) {
-    bool isTruePath = true;
-    if(curGate->arrival_time[pid] == -1)
-        isTruePath = false;
+int Network::subFindTruePath(int pid, Gate* curGate, Gate* me, Gate* you) {
+    int isTruePath = 1;
+    // cout << curGate->name << " " << me->name << " " << you->name << endl;
+    // cout << curGate->value[pid] << " " << me->value[pid] << " " << you->value[pid] << endl;
+    if (you->value[pid] == curGate->ctrlValue() &&
+        me->value[pid] != -1 && me->value[pid] != curGate->ctrlValue()) {
+        return 0;
+    }
+    if (curGate->arrival_time[pid] == -1)
+        isTruePath = -1;
     else if (curGate->type == NAND) {
         if (me->arrival_time[pid] != you->arrival_time[pid]){
             if (me->arrival_time[pid] > you->arrival_time[pid]){
@@ -582,7 +589,11 @@ void Network::genPISequence(Path &path) {
             }
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
                 GateSet set = findAssociatePI(*it);
-                path.criticList.push_back(*it);
+                if (you->first_in > me->last_in) {
+                    path.criticList.push_back({me, (*it)->ctrlValue()});
+                } else {
+                    path.criticList.push_back({you, !(*it)->ctrlValue()});
+                }
                 for (auto set_it = set.begin(); set_it != set.end(); ++set_it) {
                     if (!(*set_it)->hasTrav) {
                         path.PISequence.push_back(*set_it);
@@ -753,22 +764,27 @@ void Network::forwardSimulation( int pid , Gate* current, ModifyList &modifyList
     }
 }
 
-// if find trupath => 1; critical false => -1; default => 0
+// if find trupath => 1; critical false => 0; default => -1
 int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
     ModifyList modifyList;
     int type = path.front()->value[pid];
-    int bound = 0;
+    int bound = -1;
     if (pos == path.PISequence.end()) {
-        if (!path.isFind[type] && isTruePath(pid, path)) {
+        if (!path.isFind[type] && isTruePath(pid, path) == 1) {
             path.isFind[type] = true;
             output_format({this, pid}, path);
-            return path.isFind[0] && path.isFind[1];
+            return 1;
         }
-        return 0;
+        return -1;
     }
+    if (criticalFalse(pid, path.criticList))
+        return -1;
+    if ((bound = isTruePath(pid, path)) != -1)
+        return -1;
+
     (*pos)->arrival_time[pid] = 0;
     (*pos)->value[pid] = 0;
-    if(!bound) {
+    if(bound == -1) {
         for (Gate *nowPIFanOut : (*pos)->fan_out) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
@@ -777,7 +793,7 @@ int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
         modifyList.clear();
     }
     (*pos)->value[pid] = 1;
-    if (!bound) {
+    if (bound == -1) {
         for (Gate *nowPIFanOut : (*pos)->fan_out) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
@@ -789,14 +805,14 @@ int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
     return bound;
 }
 
-bool Network::criticalFalse(int pid, GateList &criticList) {
-    for (Gate* criGate : criticList) {
-        if (~criGate->value[pid] && criGate->value[pid] != criGate->ctrlValue())
-            return false;
+bool Network::criticalFalse(int pid, CriticalList &criticList) {
+    for (auto criGate : criticList) {
+        if (~criGate.first->value[pid] &&
+            criGate.first->value[pid] != criGate.second)
+                return true;
     }
-    return true;
+    return false;
 }
-
 void Network::clearValueWithModifyList(int pid, ModifyList &modifyList) {
     using std::get;
     for (auto &curGate : modifyList) {
