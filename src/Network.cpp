@@ -764,7 +764,7 @@ void Network::forwardSimulation( int pid , Gate* current, ModifyList &modifyList
     }
 }
 
-// if find trupath => 1; critical false => 0; default => -1
+// if find trupath => 1; bound => 0; default => -1
 int Network::branchAndBound(int pid, Path &path, GateList::iterator pos) {
     ModifyList modifyList;
     int type = path.front()->value[pid];
@@ -818,6 +818,5 @@ void Network::clearValueWithModifyList(int pid, ModifyList &modifyList) {
     for (auto &curGate : modifyList) {
         get<0>(curGate)->arrival_time[pid] = get<1>(curGate);
         get<0>(curGate)->value[pid] = get<2>(curGate);
-        // cout << get<0>(curGate)->name << " " << get<0>(curGate)->arrival_time[pid] << " " << get<0>(curGate)->value[pid] << endl;
     }
 }
