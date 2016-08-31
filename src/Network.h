@@ -48,7 +48,6 @@ public:
 };
 
 void output_format(args_t arg, Path &path);
-void* findPatternTruePath(void *args);
 
 class Network{
     friend std::ostream &operator<<(std::ostream &out, const Gate &gate);
@@ -96,6 +95,7 @@ class Network{
     void randomInput(int pid);
     char* getExpression();
     void parallelFindTruePath();
+    void findPatternTruePath(int pid);
     void evalFLTime();
     void forwardSimulation(int pid, Gate* gate, ModifyList &modifyList);
     void clearValueWithModifyList(int pid, ModifyList &modifyList);

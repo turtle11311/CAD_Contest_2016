@@ -1,5 +1,6 @@
 #include "Network.h"
-#include <pthread.h>
+#include <thread>
+#include <mutex>
 #include <ctime>
 #include <algorithm>
 #include <functional>
@@ -20,8 +21,7 @@ using namespace std::placeholders;
 using std::for_each;
 using std::bind;
 
-
-static pthread_mutex_t mutex;
+std::mutex mutex;
 
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate name: " << gate.name << endl;
@@ -479,13 +479,13 @@ void Network::findAllTruePath(int pid) {
             continue;
         if (isTruePath(pid, *path)) {
             bool Print = false;
-            pthread_mutex_lock(&mutex);
+            mutex.lock();
             Print = !path->isFind[type];
             path->isFind[type] = true;
             if (Print) {
                 output_format({this, pid}, *path);
             }
-            pthread_mutex_unlock(&mutex);
+            mutex.unlock();
         }
     }
 }
@@ -678,31 +678,21 @@ void Network::randomInput(int pid) {
 void Network::parallelFindTruePath() {
     cout << "Header  {  A True Path Set  }" << endl << endl;
     cout << "Benchmark  {  " << moduleName << "  }" << endl;
-    pthread_t pid[4];
-    args_t args[4];
-    pthread_mutex_init(&mutex, NULL);
-    int ID[4];
+    std::thread threads[4];
     for (int i = 0; i < 4; ++i) {
-        ID[i] = i;
-        args[i].first = this;
-        args[i].second = i;
-        pthread_create(&pid[i], NULL, findPatternTruePath, &args[i]);
+        threads[i] = std::thread(&Network::findPatternTruePath, this, i);
     }
     for (int i = 0; i < 4; ++i) {
-        pthread_join(pid[i], NULL);
+        threads[i].join();
     }
 }
 
-void* findPatternTruePath(void *args) {
-    args_t arg = *(args_t*)args;
-    Network *net = arg.first;
-    int ID = arg.second;
+void Network::findPatternTruePath(int pid) {
     for(int i = 0; i < 100000; ++i) {
-        if (net->pathCounter >= net->paths.size() * 2)
+        if (pathCounter >= paths.size() * 2)
             break;
-        net->random2Shrink(ID);
+        random2Shrink(pid);
     }
-    pthread_exit(NULL);
 }
 
 Network::~Network() {
@@ -813,6 +803,7 @@ bool Network::criticalFalse(int pid, CriticalList &criticList) {
     }
     return false;
 }
+
 void Network::clearValueWithModifyList(int pid, ModifyList &modifyList) {
     using std::get;
     for (auto &curGate : modifyList) {
