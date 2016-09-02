@@ -787,6 +787,8 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
     ModifyList modifyList;
     int type = path.front()->value[pid];
     int bound = -1;
+    if (path.isFind[type])
+        return 1;
     if (pos == path.PISequence.end()) {
         if (!path.isFind[type] && isTruePath(pid, path) == 1) {
             path.isFind[type] = true;
