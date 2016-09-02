@@ -443,43 +443,22 @@ void Network::random2Shrink(size_t pid){
     findAllTruePath(pid);
 }
 
-// pattern + 1
-void Network::addOne(std::vector<int>& pattern){
-    pattern[0]++;
-    for (int i = 0; i < pattern.size(); i++){
-        if (pattern[i] == 2){
-            pattern[i] = 0;
-            if (i + 1 < pattern.size())
-                pattern[i + 1]++;
-        }
-        else
-            break;
-    }
-}
-
-bool isAllOne(std::vector<int> pattern){
-    for ( int i = 0 ; i < pattern.size() ; ++i )
-        if ( pattern[i] == 0 )
-            return false;
-    return true;
-}
-
-void Network::force() {
-    std::vector<int> pattern;
-    pattern.resize(start.fan_out.size());
-    for (int i = 0; i < pattern.size(); i++){
-        pattern[i] = 1;
-    }
-
-    do {
-        int index = 0;
-        for (Gate* inputport : start.fan_out) {
-            inputport->value[0] = pattern[index++];
-        }
+void Network::exhaustiveMethod() {
+    for ( auto PI : start.fan_out )
+        PI->value[0] = 0;
+    int overflow = 0;
+    while( overflow != 2 ){
         evalNetwork(0);
         findAllTruePath(0);
-        addOne(pattern);
-    }while(!isAllOne(pattern));
+        bool flag1 = start.fan_out.back()->value[0];
+        for ( auto PI : start.fan_out ){
+            PI->value[0] = !PI->value[0];
+            if ( PI->value[0] )
+                break;
+        }
+        if ( flag1 != start.fan_out.back()->value[0] )
+            ++overflow;
+    }
 }
 
 void Network::findAllTruePath(size_t pid) {
