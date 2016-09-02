@@ -443,22 +443,43 @@ void Network::random2Shrink(size_t pid){
     findAllTruePath(pid);
 }
 
-void Network::exhaustiveMethod() {
-    for ( auto PI : start.fan_out )
-        PI->value[0] = 0;
-    int overflow = 0;
-    while( overflow != 2 ){
+// pattern + 1
+void Network::addOne(std::vector<int>& pattern){
+    pattern[0]++;
+    for (int i = 0; i < pattern.size(); i++){
+        if (pattern[i] == 2){
+            pattern[i] = 0;
+            if (i + 1 < pattern.size())
+                pattern[i + 1]++;
+        }
+        else
+            break;
+    }
+}
+
+bool isAllOne(std::vector<int> pattern){
+    for ( int i = 0 ; i < pattern.size() ; ++i )
+        if ( pattern[i] == 0 )
+            return false;
+    return true;
+}
+
+void Network::force() {
+    std::vector<int> pattern;
+    pattern.resize(start.fan_out.size());
+    for (int i = 0; i < pattern.size(); i++){
+        pattern[i] = 1;
+    }
+
+    do {
+        int index = 0;
+        for (Gate* inputport : start.fan_out) {
+            inputport->value[0] = pattern[index++];
+        }
         evalNetwork(0);
         findAllTruePath(0);
-        bool flag1 = start.fan_out.back()->value[0];
-        for ( auto PI : start.fan_out ){
-            PI->value[0] = !PI->value[0];
-            if ( PI->value[0] )
-                break;
-        }
-        if ( flag1 != start.fan_out.back()->value[0] )
-            ++overflow;
-    }
+        addOne(pattern);
+    }while(!isAllOne(pattern));
 }
 
 void Network::findAllTruePath(size_t pid) {
@@ -601,7 +622,7 @@ void Network::genAllPISequence() {
         genPISequence(*path);
 }
 
-// test to print  all the gate value
+// test to print all the gate value
 void Network::test2PrintGateValue(size_t pid) {
     cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
     for (auto &eachGate : gatePool) {
@@ -694,21 +715,36 @@ void Network::findPatternTruePath(size_t pid) {
 void Network::branchAndBoundOnePath(size_t pid, Path &path) {
     ModifyList modifyList;
     path.PISequence.front()->arrival_time[pid] = 0;
-    path.PISequence.front()->value[pid] = 0;
-    for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
-        forwardSimulation(pid, nowPIFanOut, modifyList);
+    if (!path.isFind[0]) {
+        path.PISequence.front()->value[pid] = 0;
+        for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
+            forwardSimulation(pid, nowPIFanOut, modifyList);
+        }
+        branchAndBound(pid, path, ++path.PISequence.begin());
+        resetLastStatusWithModifyList(pid, modifyList);
+        modifyList.clear();
     }
-    branchAndBound(pid, path, ++path.PISequence.begin());
-    resetLastStatusWithModifyList(pid, modifyList);
-    modifyList.clear();
-    path.PISequence.front()->value[pid] = 1;
-    for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
-        forwardSimulation(pid, nowPIFanOut, modifyList);
+    if (!path.isFind[1]) {
+        path.PISequence.front()->value[pid] = 1;
+        for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
+            forwardSimulation(pid, nowPIFanOut, modifyList);
+        }
+        branchAndBound(pid, path, ++path.PISequence.begin());
+        resetLastStatusWithModifyList(pid, modifyList);
     }
-    branchAndBound(pid, path, ++path.PISequence.begin());
-    resetLastStatusWithModifyList(pid, modifyList);
     path.PISequence.front()->value[pid] = -1;
     path.PISequence.front()->arrival_time[pid] = -1;
+}
+
+bool Network::checkInverseValue(size_t pid, Path &path) {
+    auto it = path.begin();
+    int tt = 0;
+    short ness = !(*it)->value[pid];
+    for (std::advance(it, 1); tt != path.size() - 2; ++it, ++tt, ness = !ness) {
+        if (~(*it)->value[pid] && ness != (*it)->value[pid])
+            return false;
+    }
+    return true;
 }
 
 Network::~Network() {
@@ -778,11 +814,14 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
             mutex.lock();
             output_format({this, pid}, path);
             mutex.unlock();
+            findAllTruePath(pid);
             return 1;
         }
         return -1;
     }
     if (criticalFalse(pid, path.criticList))
+        return -1;
+    if (!checkInverseValue(pid, path))
         return -1;
     if ((bound = isTruePath(pid, path)) != -1)
         return -1;

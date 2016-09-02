@@ -44,6 +44,7 @@ public:
     Path();
     GateList PISequence;
     CriticalList criticList;
+    ModifyList modifyList[ThreadNumber];
     bool isFind[2];
 };
 
@@ -79,9 +80,11 @@ class Network{
     void resetAllValueAndTime(size_t pid);
     GateSet findAssociatePI( Gate* );
     void topologySort();
-    void exhaustiveMethod();
+    void addOne(std::vector<int>& pattern);
+    void force();
     void printAllPaths();
     void printIOMap();
+    bool checkInverseValue(size_t pid, Path &path);
     void random2Shrink(size_t pid);
     void findAllTruePath(size_t pid);
     int isTruePath(size_t pid, Path &path);

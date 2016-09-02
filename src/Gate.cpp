@@ -4,9 +4,9 @@
 Gate::Gate(std::string &&name, GateType type)
     : name(std::move(name)), type(type),
       hasTrav(false) , first_in(0) , last_in(0) {
-		  for ( int i = 0 ; i < ThreadNumber ; ++i )
-				value[i] = arrival_time[i] = -1;
-	  }
+    for (size_t i = 0; i < ThreadNumber; ++i)
+        value[i] = arrival_time[i] = -1;
+}
 
 void Gate::eval(int pid){
     if (type == NOT)
