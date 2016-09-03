@@ -596,9 +596,11 @@ void Network::genPISequence(Path &path) {
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
                 GateSet set = findAssociatePI(*it);
                 if (you->first_in > me->last_in) {
-                    path.criticList.push_back({me, (*it)->ctrlValue()});
+                    me->criticlValue = (*it)->ctrlValue();
+                    path.criticList.push_back(me);
                 } else {
-                    path.criticList.push_back({you, !(*it)->ctrlValue()});
+                    you->criticlValue = !(*it)->ctrlValue();
+                    path.criticList.push_back(you);
                 }
                 for (auto gate : set) {
                     path.PISequence.push_back(gate);
@@ -882,10 +884,10 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
     return bound;
 }
 
-bool Network::criticalFalse(size_t pid, CriticalList &criticList) {
+bool Network::criticalFalse(size_t pid, GateList &criticList) {
     for (auto criGate : criticList) {
-        if (~criGate.first->value[pid] &&
-            criGate.first->value[pid] != criGate.second)
+        if (~criGate->value[pid] &&
+            criGate->value[pid] != criGate->criticlValue )
                 return true;
     }
     return false;
@@ -896,5 +898,85 @@ void Network::resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList) 
     for (auto &curGate : modifyList) {
         get<0>(curGate)->arrival_time[pid] = get<1>(curGate);
         get<0>(curGate)->value[pid] = get<2>(curGate);
+    }
+}
+
+void Network::backwardImplication(Path &path, Gate *cur){
+    if ( path.isFind[0] )
+        return;
+    if ( cur->type == NOT ){
+        if ( cur->fan_in.front()->criticlValue != -1 &&
+             cur->fan_in.front()->criticlValue != !cur->criticlValue ){
+            path.isFind[0] = path.isFind[1] = true;
+            return;
+        }
+        else {
+            cur->fan_in.front()->criticlValue = !cur->criticlValue;
+            backwardImplication( path , cur->fan_in.front() );
+            for ( auto fan_out : cur->fan_out )
+                forwardImplication( path, fan_out );
+        }
+    }
+    else if ( cur->type == NAND || cur->type == NOR ){
+        int ctrlValue = ( cur->type == NOR );
+        if ( cur->criticlValue == ctrlValue ){
+            for ( auto fan_in : cur->fan_in ){
+                if ( fan_in->criticlValue != -1 &&
+                     fan_in->criticlValue != !ctrlValue ){
+                    path.isFind[0] = path.isFind[1] = true;
+                    return;
+                }
+                else{
+                    fan_in->criticlValue = !ctrlValue;
+                    backwardImplication( path , fan_in );
+                    for ( auto fan_out : cur->fan_out )
+                        forwardImplication( path, fan_out );
+                }
+            }
+        }
+    }
+}
+
+void Network::forwardImplication(Path &path, Gate *cur){
+    if ( path.isFind[0] )
+        return;
+    for ( auto fan_out : cur->fan_out ){
+        if ( fan_out->type == NOT ){
+            if ( fan_out->criticlValue != -1 && fan_out->criticlValue != !cur->criticlValue ){
+                path.isFind[0] = path.isFind[1] = true;
+                return;
+            }
+            else{
+                fan_out->criticlValue = !cur->criticlValue;
+                forwardImplication( path , fan_out );
+            }
+        }
+        else if ( fan_out->type == NAND || fan_out->type == NOR ){
+            int ctrlValue = ( fan_out->type == NOR );
+            if ( fan_out->fan_in.front()->criticlValue == ctrlValue ||
+                 fan_out->fan_in.back()->criticlValue == ctrlValue ){
+                if ( fan_out->criticlValue != -1 && fan_out->criticlValue != !ctrlValue ){
+                    path.isFind[0] = path.isFind[1] = true;
+                    return;
+                }
+                else{
+                    fan_out->criticlValue = !ctrlValue;
+                    forwardImplication( path , fan_out );
+                }
+            }
+            else if ( fan_out->fan_in.front()->criticlValue == !ctrlValue &&
+                      fan_out->fan_in.back()->criticlValue == !ctrlValue ){
+                if ( fan_out->criticlValue != -1 && fan_out->criticlValue != ctrlValue ){
+                    path.isFind[0] = path.isFind[1] = true;
+                    return;
+                }
+                else{
+                    fan_out->criticlValue = ctrlValue;
+                    forwardImplication( path , fan_out );
+                }
+            }
+        }
+        for ( auto fan_in : fan_out->fan_in )
+            backwardImplication( path , fan_in );
     }
 }

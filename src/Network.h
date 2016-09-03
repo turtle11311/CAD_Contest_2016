@@ -43,7 +43,7 @@ class Path : public GateList {
 public:
     Path();
     GateList PISequence;
-    CriticalList criticList;
+    GateList criticList;
     bool isFind[2];
 };
 
@@ -91,7 +91,7 @@ class Network{
     void genAllPISequence();
     int subFindTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
     Gate* isReady(size_t pid, Gate* out);
-    bool criticalFalse(size_t pid, CriticalList &criticList);
+    bool criticalFalse(size_t pid, GateList &criticList);
     void evalNetwork(size_t pid);
     void randomInput(size_t pid);
     void parallelFindTruePath();
@@ -109,4 +109,7 @@ class Network{
     void forwardSimulation(size_t pid, Gate* gate, ModifyList &modifyList);
     void resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList);
     void startFindTruePath();
+
+    void backwardImplication( Path& path, Gate* cur );
+    void forwardImplication( Path& path, Gate* cur );
 };
