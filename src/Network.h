@@ -96,8 +96,13 @@ class Network{
     void randomInput(size_t pid);
     void parallelFindTruePath();
     void parallelBranchAndBound();
+    void parallelExhaustiveMethod();
+    void ExhaustiveMethodThreading(size_t pid);
     void branchAndBoundThreading(size_t pid);
     void findPatternTruePath(size_t pid);
+    bool nextPIPattern(size_t pid,
+                       GateList::iterator first, GateList::iterator last,
+                       int *overflow);
     void branchAndBoundOnePath(size_t pid, Path &path);
     int branchAndBound(size_t pid, Path &path, GateList::iterator pos);
     void evalFLTime();

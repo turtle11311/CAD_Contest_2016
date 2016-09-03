@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <ctime>
+#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <cstdlib>
@@ -17,6 +18,7 @@ using std::setw;
 using std::vector;
 using std::map;
 using std::next;
+using std::prev;
 using std::move;
 
 static std::mutex mutex;
@@ -461,6 +463,22 @@ void Network::exhaustiveMethod() {
     }
 }
 
+bool Network::nextPIPattern(size_t pid,
+                            GateList::iterator first,
+                            GateList::iterator last, int *overflow)
+{
+    auto back = (*prev(last));
+    bool flag = back->value[pid];
+    for (;first != last; ++first) {
+        (*first)->value[pid] = !(*first)->value[pid];
+        if ((*first)->value[pid])
+        break;
+    }
+    if (flag != back->value[pid])
+        ++(*overflow);
+    return *overflow != 2;
+}
+
 void Network::findAllTruePath(size_t pid) {
     for (Path* path : paths) {
         short type = path->front()->value[pid];
@@ -675,6 +693,40 @@ void Network::parallelBranchAndBound() {
     for (size_t i = 0; i < ThreadNumber; ++i) {
         threads[i].join();
     }
+}
+
+void Network::parallelExhaustiveMethod() {
+    std::thread threads[ThreadNumber];
+    int overflow[ThreadNumber];
+    for (size_t i = 0; i < ThreadNumber; ++i)
+        overflow[i] = 0;
+    for (Gate* PI : start.fan_out) {
+        for (size_t i = 0; i < ThreadNumber; ++i)
+            PI->value[i] = 0;
+    }
+    int offset = log(ThreadNumber);
+    for (size_t i = 0; i < ThreadNumber; ++i) {
+        for (int j = 0; j < i; j++) {
+            nextPIPattern(i, start.fan_out.begin(),
+            next(start.fan_out.begin(), offset), &overflow[i]);
+        }
+        threads[i] = std::thread(&Network::ExhaustiveMethodThreading, this, i);
+    }
+    for (size_t i = 0; i < ThreadNumber; ++i) {
+        threads[i].join();
+    }
+}
+
+void Network::ExhaustiveMethodThreading(size_t pid) {
+    int offset = log(ThreadNumber);
+    auto sep = next(start.fan_out.begin(), offset);
+    bool next;
+    int overflow = 0;
+    do {
+        evalNetwork(pid);
+        findAllTruePath(pid);
+        next = nextPIPattern(pid, sep, start.fan_out.end(), &overflow);
+    } while (next);
 }
 
 void Network::branchAndBoundThreading(size_t pid) {
