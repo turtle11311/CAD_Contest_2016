@@ -110,6 +110,8 @@ class Network{
     void resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList);
     void startFindTruePath();
 
+    bool backwardIsConflict( Path& path , Gate* direction , Gate* cur );
+    bool forwardIsConflict( Path& path , Gate* direction , int mode );
     void backwardImplication( Path& path, Gate* cur );
     void forwardImplication( Path& path, Gate* cur );
 };
