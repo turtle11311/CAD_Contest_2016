@@ -25,10 +25,6 @@ int main(int argc, char const *argv[]) {
     slack = atoi(argv[2]);
     Network net(timing, slack, file);
     net.createGraph();
-    net.findAllPath();
-    net.topologySort();
-    net.evalFLTime();
-    net.genAllPISequence();
-    net.parallelBranchAndBound();
+    net.startFindTruePath();
     return 0;
 }

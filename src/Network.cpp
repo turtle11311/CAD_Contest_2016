@@ -148,8 +148,17 @@ void output_format(args_t arg, Path &path) {
 }
 
 void Network::startFindTruePath() {
+    findAllPath();
+    topologySort();
     cout << "Header  {  A True Path Set  }" << endl << endl;
     cout << "Benchmark  {  " << moduleName << "  }" << endl;
+    if (start.fan_out.size() <= 20) {
+        parallelExhaustiveMethod();
+    } else {
+        evalFLTime();
+        genAllPISequence();
+        parallelBranchAndBound();
+    }
 }
 
 char *Network::getExpression() {
@@ -442,7 +451,7 @@ void Network::topologySort() {
 void Network::random2Shrink(size_t pid){
     randomInput(pid);
     evalNetwork(pid);
-    findAllTruePath(pid);
+    checkAllPathNowIsTruePath(pid);
 }
 
 void Network::exhaustiveMethod() {
@@ -451,7 +460,7 @@ void Network::exhaustiveMethod() {
     int overflow = 0;
     while (overflow != 2) {
         evalNetwork(0);
-        findAllTruePath(0);
+        checkAllPathNowIsTruePath(0);
         bool flag1 = start.fan_out.back()->value[0];
         for (auto PI : start.fan_out) {
             PI->value[0] = !PI->value[0];
@@ -479,7 +488,7 @@ bool Network::nextPIPattern(size_t pid,
     return *overflow != 2;
 }
 
-void Network::findAllTruePath(size_t pid) {
+void Network::checkAllPathNowIsTruePath(size_t pid) {
     for (Path* path : paths) {
         short type = path->front()->value[pid];
         if (path->isFind[type])
@@ -509,7 +518,7 @@ int Network::isTruePath(size_t pid, Path &path) {
                 you = curGate->fan_in.front();
                 me = curGate->fan_in.back();
             }
-            if ((ret = subFindTruePath(pid, curGate, me, you)) != 1)
+            if ((ret = subIsTruePath(pid, curGate, me, you)) != 1)
                 return ret;
         }
         me = curGate;
@@ -518,7 +527,7 @@ int Network::isTruePath(size_t pid, Path &path) {
 }
 
 // define both (you & me)'s arrival time == -1, means it's false path
-int Network::subFindTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you) {
+int Network::subIsTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you) {
     int isTruePath = 1;
     // cout << curGate->name << " " << me->name << " " << you->name << endl;
     // cout << curGate->value[pid] << " " << me->value[pid] << " " << you->value[pid] << endl;
@@ -677,7 +686,7 @@ void Network::randomInput(size_t pid) {
     }
 }
 
-void Network::parallelFindTruePath() {
+void Network::parallelRandomMethod() {
     std::thread threads[ThreadNumber];
     for (size_t i = 0; i < ThreadNumber; ++i) {
         threads[i] = std::thread(&Network::findPatternTruePath, this, i);
@@ -726,7 +735,7 @@ void Network::ExhaustiveMethodThreading(size_t pid) {
     int overflow = 0;
     do {
         evalNetwork(pid);
-        findAllTruePath(pid);
+        checkAllPathNowIsTruePath(pid);
         next = nextPIPattern(pid, sep, start.fan_out.end(), &overflow);
     } while (next);
 }
@@ -849,7 +858,7 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
             mutex.lock();
             output_format({this, pid}, path);
             mutex.unlock();
-            findAllTruePath(pid);
+            checkAllPathNowIsTruePath(pid);
             return 1;
         }
         return -1;
