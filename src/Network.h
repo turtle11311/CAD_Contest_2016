@@ -45,6 +45,7 @@ public:
     GateList PISequence;
     CriticalList criticList;
     bool isFind[2];
+    bool hasOne;
 };
 
 void output_format(args_t arg, Path &path);
@@ -84,17 +85,17 @@ class Network{
     void printIOMap();
     bool checkInverseValue(size_t pid, Path &path);
     void random2Shrink(size_t pid);
-    void findAllTruePath(size_t pid);
+    void checkAllPathNowIsTruePath(size_t pid);
     int isTruePath(size_t pid, Path &path);
     void test2PrintGateValue(size_t pid);
     void genPISequence(Path &path);
     void genAllPISequence();
-    int subFindTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
+    int subIsTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
     Gate* isReady(size_t pid, Gate* out);
     bool criticalFalse(size_t pid, CriticalList &criticList);
     void evalNetwork(size_t pid);
     void randomInput(size_t pid);
-    void parallelFindTruePath();
+    void parallelRandomMethod();
     void parallelBranchAndBound();
     void parallelExhaustiveMethod();
     void ExhaustiveMethodThreading(size_t pid);
