@@ -10,11 +10,12 @@
 #include <iterator>
 #include <cstdio>
 using std::cout;
-using std::endl;
-using std::list;
 using std::cin;
-using std::string;
 using std::setw;
+using std::endl;
+using std::flush;
+using std::list;
+using std::string;
 using std::vector;
 using std::map;
 using std::next;
@@ -39,15 +40,13 @@ std::ostream &operator<<(std::ostream &out, const Gate &gate) {
 Path::Path() : isFind{false, false}
 {}
 
-void output_format(args_t arg, Path &path) {
-    Network *net = arg.first;
-    size_t pid = arg.second;
-    cout << "\nPath  {  " << ++(net->pathCounter) << "  }" << endl;
-    cout << "\n    A True Path List\n    {\n"
+void Network::output_format(size_t pid, Path &path) {
+    outputFile << "\nPath  {  " << ++pathCounter << "  }\n";
+    outputFile << "\n    A True Path List\n    {\n"
         << "    ---------------------------------------------------------------------------\n"
         << "    Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
         << "    ---------------------------------------------------------------------------\n";
-    int constrain = net->timing;
+    int constrain = timing;
     GateList::iterator it = path.begin();
     GateList::iterator temp;
     int slack_time = 0;
@@ -55,15 +54,15 @@ void output_format(args_t arg, Path &path) {
     for (; it != path.end(); ++it){
         buf = "    ";
         if ((*it)->type == INPUT || (*it)->type == OUTPUT){
-            cout << std::left << setw(44);
+            outputFile << std::left << setw(44);
             buf += (*it)->name + " " + ((*it)->type == INPUT ? "(in)" : "(out)");
-            cout << buf << setw(11) << "0" << (*it)->arrival_time[pid] - ((*it)->type == OUTPUT) << " ";
+            outputFile << buf << setw(11) << "0" << (*it)->arrival_time[pid] - ((*it)->type == OUTPUT) << " ";
             if((*it)->value[pid])
-                cout << "r\n";
+                outputFile << "r\n";
             else
-                cout << "f\n";
+                outputFile << "f\n";
         } else {
-            cout << std::left << setw(44);
+            outputFile << std::left << setw(44);
             buf += (*it)->name;
             if(*temp == (*it)->fan_in.front())
                 buf+="/A (";
@@ -87,13 +86,13 @@ void output_format(args_t arg, Path &path) {
                 buf+="1)";
             else if ((*it)->type == NOR || (*it)->type == NAND)
                 buf+="2)";
-            cout << buf << setw(11) << "0" << (*temp)->arrival_time[pid]  << " ";
+            outputFile << buf << setw(11) << "0" << (*temp)->arrival_time[pid]  << " ";
             if((*temp)->value[pid])
-                cout << "r\n";
+                outputFile << "r\n";
             else
-                cout << "f\n";
+                outputFile << "f\n";
 
-            cout << std::left << setw(44);
+            outputFile << std::left << setw(44);
             buf = "    " + (*it)->name;
             buf+="/Y (";
 
@@ -115,43 +114,44 @@ void output_format(args_t arg, Path &path) {
                 buf+="1)";
             else if ((*it)->type == NOR || (*it)->type == NAND)
                 buf+="2)";
-            cout << buf << setw(11) << "1" << (*it)->arrival_time[pid]  << " ";
+            outputFile << buf << setw(11) << "1" << (*it)->arrival_time[pid]  << " ";
             if((*it)->value[pid])
-                cout << "r\n";
+                outputFile << "r\n";
             else
-                cout << "f\n";
+                outputFile << "f\n";
             slack_time = (*it)->arrival_time[pid];
         }
         temp = it;
     }
-    cout << "    --------------------------------------------------------------------------\n"
+    outputFile << "    --------------------------------------------------------------------------\n"
         << setw(30) << "    Data Required Time"  << constrain << endl;
-    cout << setw(30)  << "    Data Arrival Time" ;
-    cout << slack_time << endl <<
+    outputFile << setw(30)  << "    Data Arrival Time" ;
+    outputFile << slack_time << "\n" <<
         "    --------------------------------------------------------------------------\n";
-    cout << setw(30) << "    Slack"   << constrain - slack_time << "\n    }\n\n"
+    outputFile << setw(30) << "    Slack"   << constrain - slack_time << "\n    }\n\n"
         << "    Input Vector\n    {\n";
-    for (auto it = net->start.fan_out.begin(); it != net->start.fan_out.end(); ++it)
+    for (auto it = start.fan_out.begin(); it != start.fan_out.end(); ++it)
     {
-        cout << "        " << (*it)->name << " = ";
+        outputFile << "        " << (*it)->name << " = ";
         if(*it == *(path.begin()))
         {
             if((*it)->value[pid])
-                cout << "r\n";
+                outputFile << "r\n";
             else
-                cout << "f\n";
+                outputFile << "f\n";
         }
         else
-            cout << (~(*it)->value[pid] ? (*it)->value[pid] : rand() % 2) << endl;
+            outputFile << (~(*it)->value[pid] ? (*it)->value[pid] : 0) << "\n";
     }
-    cout << "    }\n";
+    outputFile << "    }\n";
+    outputFile << flush;
 }
 
 void Network::startFindTruePath() {
     findAllPath();
     topologySort();
-    cout << "Header  {  A True Path Set  }" << endl << endl;
-    cout << "Benchmark  {  " << moduleName << "  }" << endl;
+    outputFile << "Header  {  A True Path Set  }" << endl << endl;
+    outputFile << "Benchmark  {  " << moduleName << "  }" << endl;
     if (start.fan_out.size() <= 20) {
         parallelExhaustiveMethod();
     } else {
@@ -171,8 +171,9 @@ char *Network::getExpression() {
     return strdup(expression.c_str());
 }
 
-Network::Network(unsigned int timing, unsigned int slack, std::istream& in)
-    : inputFile(in), timing(timing), slack(slack), start("start"), end("end"),
+Network::Network(unsigned int timing, unsigned int slack,
+                 std::istream& in, std::ostream& out)
+    : inputFile(in), outputFile(out), timing(timing), slack(slack), start("start"), end("end"),
       pathCounter(0), minimun(timing - slack)
 {
     srand(time(NULL));
@@ -499,7 +500,7 @@ void Network::checkAllPathNowIsTruePath(size_t pid) {
             Print = !path->isFind[type];
             path->isFind[type] = true;
             if (Print) {
-                output_format({this, pid}, *path);
+                output_format(pid, *path);
             }
             mutex.unlock();
         }
@@ -529,8 +530,6 @@ int Network::isTruePath(size_t pid, Path &path) {
 // define both (you & me)'s arrival time == -1, means it's false path
 int Network::subIsTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you) {
     int isTruePath = 1;
-    // cout << curGate->name << " " << me->name << " " << you->name << endl;
-    // cout << curGate->value[pid] << " " << me->value[pid] << " " << you->value[pid] << endl;
     if (you->value[pid] == curGate->ctrlValue() &&
         me->value[pid] != -1 && me->value[pid] != curGate->ctrlValue()) {
         return 0;
@@ -606,11 +605,11 @@ void Network::genPISequence(Path &path) {
                 GateSet set = findAssociatePI(*it);
                 if (you->first_in > me->last_in) {
                     me->criticalValue = (*it)->ctrlValue();
-                    backwardImplication( path , me );
+                    // backwardImplication( path , me );
                     path.criticList.push_back({me, (*it)->ctrlValue()});
                 } else {
                     you->criticalValue = !(*it)->ctrlValue();
-                    backwardImplication( path , you );
+                    // backwardImplication( path , you );
                     path.criticList.push_back({you, !(*it)->ctrlValue()});
                 }
                 for (auto gate : set) {
@@ -862,7 +861,7 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
         if (!path.isFind[type] && isTruePath(pid, path) == 1) {
             path.isFind[type] = true;
             mutex.lock();
-            output_format({this, pid}, path);
+            output_format(pid, path);
             mutex.unlock();
             checkAllPathNowIsTruePath(pid);
             return 1;

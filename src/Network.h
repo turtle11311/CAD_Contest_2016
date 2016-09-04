@@ -47,13 +47,13 @@ public:
     bool isFind[2];
 };
 
-void output_format(args_t arg, Path &path);
 
 class Network{
     friend std::ostream &operator<<(std::ostream &out, const Gate &gate);
     public:
     // Network data
     std::istream &inputFile;
+    std::ostream &outputFile;
     int timing, slack;
     Gate start;
     Gate end;
@@ -68,11 +68,12 @@ class Network{
     std::map<Gate*,GateSet> IOMap;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
-            std::istream &in = std::cin);
+            std::istream &in = std::cin, std::ostream &out = std::cout);
     ~Network();
     Gate *findGateByName(const char *name);
     char* getExpression();
     void gateWiring(Gate *input, Gate *output);
+    void output_format(size_t pid, Path &path);
     void createGraph();
     void findAllPath();
     void resetAllfan_out_it();
