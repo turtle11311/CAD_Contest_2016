@@ -25,5 +25,5 @@ public:
 
     int first_in;
     int last_in;
-    short criticlValue;
+    short criticalValue;
 };

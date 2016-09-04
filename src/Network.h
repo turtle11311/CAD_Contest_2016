@@ -14,7 +14,7 @@ class Path;
 typedef std::map<std::string, Gate*> GateMap;
 typedef std::set<Gate*> GateSet;
 typedef std::pair<Network*, size_t> args_t;
-typedef std::list<std::tuple<Gate*, int, int>> ModifyList;
+typedef std::list<std::tuple<Gate*, int, short>> ModifyList;
 typedef std::list<std::pair<Gate*, short>> CriticalList;
 
 template <typename Container>
@@ -43,7 +43,7 @@ class Path : public GateList {
 public:
     Path();
     GateList PISequence;
-    GateList criticList;
+    CriticalList criticList;
     bool isFind[2];
 };
 
@@ -91,7 +91,7 @@ class Network{
     void genAllPISequence();
     int subIsTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
     Gate* isReady(size_t pid, Gate* out);
-    bool criticalFalse(size_t pid, GateList &criticList);
+    bool criticalFalse(size_t pid, CriticalList &criticList);
     void evalNetwork(size_t pid);
     void randomInput(size_t pid);
     void parallelRandomMethod();

@@ -605,13 +605,13 @@ void Network::genPISequence(Path &path) {
             if (you->first_in > me->last_in || you->last_in < me->first_in) {
                 GateSet set = findAssociatePI(*it);
                 if (you->first_in > me->last_in) {
-                    me->criticlValue = (*it)->ctrlValue();
+                    me->criticalValue = (*it)->ctrlValue();
                     backwardImplication( path , me );
-                    path.criticList.push_back(me);
+                    path.criticList.push_back({me, (*it)->ctrlValue()});
                 } else {
-                    you->criticlValue = !(*it)->ctrlValue();
+                    you->criticalValue = !(*it)->ctrlValue();
                     backwardImplication( path , you );
-                    path.criticList.push_back(you);
+                    path.criticList.push_back({you, !(*it)->ctrlValue()});
                 }
                 for (auto gate : set) {
                     path.PISequence.push_back(gate);
@@ -619,6 +619,10 @@ void Network::genPISequence(Path &path) {
             }
         }
         me = *it;
+    }
+    // reset criticalValue
+    for (auto gate : path.criticList) {
+        gate.first->criticalValue = -1;
     }
     //add AccosiateSeq
     GateSet acSet = findAssociatePI(path.back());
@@ -895,10 +899,10 @@ int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
     return bound;
 }
 
-bool Network::criticalFalse(size_t pid, GateList &criticList) {
+bool Network::criticalFalse(size_t pid, CriticalList &criticList) {
     for (auto criGate : criticList) {
-        if (~criGate->value[pid] &&
-            criGate->value[pid] != criGate->criticlValue )
+        if (~criGate.first->value[pid] &&
+            criGate.first->value[pid] != criGate.second )
                 return true;
     }
     return false;
@@ -914,17 +918,17 @@ void Network::resetLastStatusWithModifyList(size_t pid, ModifyList &modifyList) 
 
 bool Network::backwardIsConflict( Path& path , Gate* direction , Gate* cur ){
     if ( cur->type == NOT ){
-        if ( direction->criticlValue != -1 &&
-             direction->criticlValue != !cur->criticlValue ){
+        if ( direction->criticalValue != -1 &&
+             direction->criticalValue != !cur->criticalValue ){
             path.isFind[0] = path.isFind[1] = true;
             return true;
         }
     }
     else if ( cur->type == NAND || cur->type == NOR ){
         int ctrlValue = ( cur->type == NOR );
-        if ( cur->criticlValue == ctrlValue ){
-            if ( direction->criticlValue != -1 &&
-                 direction->criticlValue != !ctrlValue ){
+        if ( cur->criticalValue == ctrlValue ){
+            if ( direction->criticalValue != -1 &&
+                 direction->criticalValue != !ctrlValue ){
                 path.isFind[0] = path.isFind[1] = true;
                 return true;
             }
@@ -933,20 +937,20 @@ bool Network::backwardIsConflict( Path& path , Gate* direction , Gate* cur ){
     return false;
 }
 
-bool Network::forwardIsConflict( Path& path , Gate* direction , int mode ){
+bool Network::forwardIsConflict( Path& path , Gate* direction , int mode ) {
     int ctrlValue = ( direction->type == NOR );
-    if ( !mode )
-        if ( direction->fan_in.front()->criticlValue == ctrlValue ||
-             direction->fan_in.back()->criticlValue == ctrlValue ){
-            if ( direction->criticlValue != -1 && direction->criticlValue != !ctrlValue ){
+    if ( !mode ) {
+        if ( direction->fan_in.front()->criticalValue == ctrlValue ||
+             direction->fan_in.back()->criticalValue == ctrlValue ) {
+            if ( direction->criticalValue != -1 && direction->criticalValue != !ctrlValue ){
                 path.isFind[0] = path.isFind[1] = true;
                 return true;
             }
         }
-    else{
-        if ( direction->fan_in.front()->criticlValue == !ctrlValue &&
-             direction->fan_in.back()->criticlValue == !ctrlValue ){
-            if ( direction->criticlValue != -1 && direction->criticlValue != ctrlValue ){
+    } else {
+        if ( direction->fan_in.front()->criticalValue == !ctrlValue &&
+             direction->fan_in.back()->criticalValue == !ctrlValue ) {
+            if ( direction->criticalValue != -1 && direction->criticalValue != ctrlValue ){
                 path.isFind[0] = path.isFind[1] = true;
                 return true;
             }
@@ -955,17 +959,18 @@ bool Network::forwardIsConflict( Path& path , Gate* direction , int mode ){
     return false;
 }
 
-void Network::backwardImplication(Path &path, Gate *cur){
+void Network::backwardImplication(Path &path, Gate *cur) {
     if ( path.isFind[0] )
         return;
     if ( cur->type == NOT ){
         if ( backwardIsConflict( path , cur->fan_in.front() , cur ) )
             return;
         else {
-            cur->fan_in.front()->criticlValue = !cur->criticlValue;
+            cur->fan_in.front()->criticalValue = !cur->criticalValue;
+            path.criticList.push_back({cur->fan_in.front(), !cur->criticalValue});
             backwardImplication( path , cur->fan_in.front() );
             for ( auto fan_out : cur->fan_out ){
-                if ( fan_out->criticlValue == -1 )
+                if ( fan_out->criticalValue == -1 )
                     forwardImplication( path, fan_out );
                 else{
                     if ( forwardIsConflict( path, fan_out, 0) || forwardIsConflict(path, fan_out , 1 ) )
@@ -980,10 +985,11 @@ void Network::backwardImplication(Path &path, Gate *cur){
             if ( backwardIsConflict( path , fan_in , cur) )
                 return;
             else{
-                fan_in->criticlValue = !ctrlValue;
+                fan_in->criticalValue = !ctrlValue;
+                path.criticList.push_back({fan_in, !ctrlValue});
                 backwardImplication( path , fan_in );
                 for ( auto fan_out : cur->fan_out ){
-                    if ( fan_out->criticlValue == -1 )
+                    if ( fan_out->criticalValue == -1 )
                         forwardImplication( path, fan_out );
                     else{
                         if ( forwardIsConflict( path, fan_out, 0) || forwardIsConflict(path, fan_out , 1 ) )
@@ -1003,7 +1009,7 @@ void Network::forwardImplication(Path &path, Gate *cur){
             if ( backwardIsConflict( path , fan_out->fan_in.front() , cur ) )
                 return;
             else{
-                fan_out->criticlValue = !cur->criticlValue;
+                fan_out->criticalValue = !cur->criticalValue;
                 forwardImplication( path , fan_out );
             }
         }
@@ -1013,14 +1019,16 @@ void Network::forwardImplication(Path &path, Gate *cur){
             if ( forwardIsConflict( path, fan_out , 0 ) )
                 return;
             else{
-                fan_out->criticlValue = !ctrlValue;
+                fan_out->criticalValue = !ctrlValue;
+                path.criticList.push_back({fan_out, !ctrlValue});
                 forwardImplication( path , fan_out );
             }
 
             if ( forwardIsConflict( path, fan_out , 1 ) )
                 return;
             else{
-                fan_out->criticlValue = ctrlValue;
+                fan_out->criticalValue = ctrlValue;
+                path.criticList.push_back({fan_out, ctrlValue});
                 forwardImplication( path , fan_out );
             }
         }
