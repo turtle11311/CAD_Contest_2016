@@ -13,7 +13,7 @@ class Network;
 class Path;
 typedef std::map<std::string, Gate*> GateMap;
 typedef std::set<Gate*> GateSet;
-typedef std::pair<Network*, size_t> args_t;
+typedef std::vector<Gate*> GateVector;
 typedef std::list<std::tuple<Gate*, int, short>> ModifyList;
 typedef std::list<std::pair<Gate*, short>> CriticalList;
 
@@ -39,9 +39,10 @@ void getTokens(Container &tokens, char *src) {
     } while (tok);
 }
 
-class Path : public GateList {
+class Path : public GateVector {
 public:
     Path();
+    Path(Path &path);
     GateList PISequence;
     CriticalList criticList;
     bool isFind[2];

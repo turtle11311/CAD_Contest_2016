@@ -37,7 +37,10 @@ std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     return out;
 }
 
-Path::Path() : isFind{false, false}
+Path::Path() : GateVector(), isFind{false, false}
+{}
+
+Path::Path(Path &path) : GateVector(path), isFind{false, false}
 {}
 
 void Network::output_format(size_t pid, Path &path) {
@@ -47,8 +50,8 @@ void Network::output_format(size_t pid, Path &path) {
         << "    Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
         << "    ---------------------------------------------------------------------------\n";
     int constrain = timing;
-    GateList::iterator it = path.begin();
-    GateList::iterator temp;
+    auto it = path.begin();
+    auto temp = it;
     int slack_time = 0;
     string buf;
     for (; it != path.end(); ++it){
@@ -385,6 +388,7 @@ GateSet Network::findAssociatePI(Gate* in) {
 
 void Network::findAllPath() {
     Path path;
+    path.reserve(1000);
     for (Gate* inputport : start.fan_out) {
         path.push_back(inputport);
         while (path.size()) {
@@ -403,8 +407,6 @@ void Network::findAllPath() {
             }
         }
     }
-    std::sort(paths.begin(), paths.end(), [](const Path *a, const Path *b)
-    { return a->size() < b->size(); });
 }
 
 void Network::printIOMap(){
@@ -633,6 +635,9 @@ void Network::genPISequence(Path &path) {
 void Network::genAllPISequence() {
     for (Path* path : paths)
         genPISequence(*path);
+
+    std::sort(paths.begin(), paths.end(), [](const Path *a, const Path *b)
+    { return a->PISequence.size() < b->PISequence.size(); });
 }
 
 // test to print all the gate value

@@ -28,5 +28,7 @@ int main(int argc, char const *argv[]) {
     Network net(timing, slack, file, out);
     net.createGraph();
     net.startFindTruePath();
+    file.close();
+    out.close();
     return 0;
 }
