@@ -955,7 +955,7 @@ bool Network::backwardIsConflict( Path& path , Gate* direction , Gate* cur ){
     return false;
 }
 
-bool Network::forwardIsConflict( Path& path , Gate* direction , int mode ) {
+bool Network::forwardIsConflict( Path& path , Gate* direction ) {
     if ( direction->type == NOT ){
         if ( direction->criticalValue != -1 && direction->fan_in.front()->criticalValue == direction->criticalValue ){
             path.isFind[0] = path.isFind[1] = true;
@@ -1069,7 +1069,7 @@ void Network::forwardImplication(Path &path, Gate *cur){
         return;
     for ( auto fan_out : cur->fan_out ){
         if ( fan_out->type == NOT ){
-            if ( forwardIsConflict( path , fan_out , 0) )
+            if ( forwardIsConflict( path , fan_out ) )
                 return;
             else{
                 if ( fan_out->criticalValue == -1 ){
@@ -1083,7 +1083,7 @@ void Network::forwardImplication(Path &path, Gate *cur){
 
 
             int ctrlValue = ( cur->type == NOR );
-            if ( forwardIsConflict( path, fan_out , 0 ) )
+            if ( forwardIsConflict( path, fan_out ) )
                 return;
             else{
                 if ( fan_out->type == NOR && fan_out->criticalValue == -1 ){

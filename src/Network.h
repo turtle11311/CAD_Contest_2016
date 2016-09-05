@@ -113,7 +113,7 @@ class Network{
     void startFindTruePath();
 
     bool backwardIsConflict( Path& path , Gate* direction , Gate* cur );
-    bool forwardIsConflict( Path& path , Gate* direction , int mode );
+    bool forwardIsConflict( Path& path , Gate* direction );
     void backwardImplication( Path& path, Gate* cur );
     void forwardImplication( Path& path, Gate* cur );
 };
