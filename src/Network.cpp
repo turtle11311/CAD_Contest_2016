@@ -623,7 +623,7 @@ void Network::genPISequence(Path &path) {
                         backwardImplication( path , you );
                         path.criticList.push_back({you, !(*it)->ctrlValue()});
                     }
-                    else if (you->criticalValue != (*it)->ctrlValue()) {
+                    else if (you->criticalValue != !(*it)->ctrlValue()) {
                         path.isFind[0] = path.isFind[1] = true;
                         break;
                     }
@@ -999,7 +999,6 @@ void Network::backwardImplication(Path &path, Gate *cur) {
         }
     }
     else if ( cur->type == NAND || cur->type == NOR ){
-        int ctrlValue = ( cur->type == NOR );
         if ( backwardIsConflict(path , cur->fan_in.front() , cur ) ||
              backwardIsConflict( path , cur->fan_in.back() , cur ))
             return;
@@ -1064,8 +1063,7 @@ void Network::backwardImplication(Path &path, Gate *cur) {
 }
 
 void Network::forwardImplication(Path &path, Gate *cur){
-
-    if ( path.isFind[0] )
+    if ( path.isFind[0] && path.isFind[1] )
         return;
     for ( auto fan_out : cur->fan_out ){
         if ( fan_out->type == NOT ){
@@ -1080,9 +1078,6 @@ void Network::forwardImplication(Path &path, Gate *cur){
             }
         }
         else if ( fan_out->type == NAND || fan_out->type == NOR ){
-
-
-            int ctrlValue = ( cur->type == NOR );
             if ( forwardIsConflict( path, fan_out ) )
                 return;
             else{
