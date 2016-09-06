@@ -26,8 +26,8 @@ using std::move;
 static std::mutex mutex;
 
 void addPIPortToPISequence(Path &path, Gate* gate) {
-    if (gate->type == INPUT) {
-        path.PISequence.push_back(gate);
+    if (gate->type == INPUT && !gate->hasTrav) {
+        path.PISequence.insert(next(path.PISequence.begin()), gate);
         gate->hasTrav = true;
     }
 }
@@ -384,17 +384,17 @@ void Network::resetAllValueAndTime(size_t pid) {
         it.second->value[pid] = it.second->arrival_time[pid] = -1;
 }
 
-GateSet Network::findAssociatePI(Gate* in) {
-    GateSet PISet;
+GateList Network::findAssociatePI(Gate* in) {
+    GateList PISet;
     GateList Queue;
     Queue.push_back(in);
     while( Queue.size() ){
-        for ( Gate* gate : Queue.front()->fan_in )
+        for (Gate* gate : Queue.front()->fan_in)
             if (!gate->hasTrav && gate != &start) {
                 Queue.push_back(gate);
             }
-        if ( Queue.front()->type == INPUT )
-            PISet.insert(Queue.front());
+        if (Queue.front()->type == INPUT && !Queue.front()->hasTrav)
+            PISet.push_back(Queue.front());
         Queue.front()->hasTrav = true;
         Queue.pop_front();
     }
@@ -602,8 +602,6 @@ void Network::genPISequence(Path &path) {
                 }
             }
             if (you->first_in > count || you->last_in < count) {
-                GateSet set = findAssociatePI(*it);
-
                 if (you->first_in > count) {
                     if ( me->criticalValue == -1 ){
                         me->criticalValue = (*it)->ctrlValue();
@@ -626,6 +624,7 @@ void Network::genPISequence(Path &path) {
                         break;
                     }
                 }
+                GateList set = findAssociatePI(*it);
                 for (auto gate : set) {
                     path.PISequence.push_back(gate);
                 }
@@ -635,7 +634,7 @@ void Network::genPISequence(Path &path) {
     }
     for (auto it = path.criticList.begin(); it != path.criticList.end();) {
         if (it->first->type == INPUT) {
-            path.criticList.insert(path.criticList.begin(), *it);
+            path.criticList.insert(next(path.criticList.begin()), *it);
             it = path.criticList.erase(it);
         }
         ++it;
@@ -645,7 +644,7 @@ void Network::genPISequence(Path &path) {
         gate.first->criticalValue = -1;
     }
     //add AccosiateSeq
-    GateSet acSet = findAssociatePI(path.back());
+    GateList acSet = findAssociatePI(path.back());
     for (auto gate : acSet) {
         path.PISequence.push_back(gate);
     }

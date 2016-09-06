@@ -81,7 +81,7 @@ class Network{
     void findAllPath();
     void resetAllfan_out_it();
     void resetAllValueAndTime(size_t pid);
-    GateSet findAssociatePI( Gate* );
+    GateList findAssociatePI( Gate* );
     void topologySort();
     void exhaustiveMethod();
     bool checkInverseValue(size_t pid, Path &path);
