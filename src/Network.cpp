@@ -155,7 +155,7 @@ void Network::startFindTruePath() {
     topologySort();
     outputFile << "Header  {  A True Path Set  }" << endl << endl;
     outputFile << "Benchmark  {  " << moduleName << "  }" << endl;
-    if (start.fan_out.size() <= 20) {
+    if (start.fan_out.size() <= 5) {
         parallelExhaustiveMethod();
     } else {
         evalFLTime();
@@ -591,8 +591,9 @@ void Network::genPISequence(Path &path) {
     }
     path.front()->hasTrav = true;
     path.PISequence.push_back(path.front());
+    int count = -1;
     // put critical gate to trySeq
-    for (auto it = path.begin(); it != path.end(); ++it) {
+    for (auto it = path.begin(); it != path.end(); ++it, ++count) {
         if ((*it)->type == NAND || (*it)->type == NOR) {
             Gate *you;
             if ((*it)->type == NAND || (*it)->type == NOR) {
@@ -604,10 +605,10 @@ void Network::genPISequence(Path &path) {
                     me = (*it)->fan_in.back();
                 }
             }
-            if (you->first_in > me->last_in || you->last_in < me->first_in) {
+            if (you->first_in > count || you->last_in < count) {
                 GateSet set = findAssociatePI(*it);
 
-                if (you->first_in > me->last_in) {
+                if (you->first_in > count) {
                     if ( me->criticalValue == -1 ){
                         me->criticalValue = (*it)->ctrlValue();
                         backwardImplication( path , me );
