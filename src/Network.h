@@ -69,7 +69,6 @@ class Network{
     GateMap wirePool;
     GateList evalSequence;
     std::vector<Path*> paths;
-    std::map<Gate*,GateSet> IOMap;
     // Network function
     Network(unsigned int timing = UINT_MAX, unsigned int slack = UINT_MAX,
             std::istream &in = std::cin, std::ostream &out = std::cout);
@@ -85,17 +84,13 @@ class Network{
     GateSet findAssociatePI( Gate* );
     void topologySort();
     void exhaustiveMethod();
-    void printAllPaths();
-    void printIOMap();
     bool checkInverseValue(size_t pid, Path &path);
     void random2Shrink(size_t pid);
     void checkAllPathNowIsTruePath(size_t pid);
     int isTruePath(size_t pid, Path &path);
-    void test2PrintGateValue(size_t pid);
     void genPISequence(Path &path);
     void genAllPISequence();
     int subIsTruePath(size_t pid, Gate* curGate, Gate* me, Gate* you);
-    Gate* isReady(size_t pid, Gate* out);
     bool criticalFalse(size_t pid, CriticalList &criticList);
     void evalNetwork(size_t pid);
     void randomInput(size_t pid);
