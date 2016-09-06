@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <ctime>
+#include <climits>
 #include <cmath>
 #include <algorithm>
 #include <functional>
@@ -44,7 +45,7 @@ Path::Path(Path &path) : GateVector(path), isFind{false, false}
 {}
 
 void Network::output_format(size_t pid, Path &path) {
-    outputFile << "\nPath  {  " << ++pathCounter << "  }\n";
+    outputFile << "\nPath  {  " << ++truePathCounter << "  }\n";
     outputFile << "\n    A True Path List\n    {\n"
         << "    ---------------------------------------------------------------------------\n"
         << "    Pin" <<"    "<< "type" <<"                                "<< "Incr" <<"        "<< "Path delay\n"
@@ -151,14 +152,18 @@ void Network::output_format(size_t pid, Path &path) {
 }
 
 void Network::startFindTruePath() {
+    size_t PISize = start.fan_out.size();
     findAllPath();
     topologySort();
     outputFile << "Header  {  A True Path Set  }" << endl << endl;
     outputFile << "Benchmark  {  " << moduleName << "  }" << endl;
-    if (start.fan_out.size() <= 5) {
+    if (PISize <= 20) {
         parallelExhaustiveMethod();
     } else {
+        if (PISize >= 60)
+            branchLimit = 640;
         evalFLTime();
+        cout << "start PISeq" << endl;
         genAllPISequence();
         parallelBranchAndBound();
     }
@@ -177,8 +182,11 @@ char *Network::getExpression() {
 Network::Network(unsigned int timing, unsigned int slack,
                  std::istream& in, std::ostream& out)
     : inputFile(in), outputFile(out), timing(timing), slack(slack), start("start"), end("end"),
-      pathCounter(0), minimun(timing - slack)
+      truePathCounter(0), pathCounter(0), minimun(timing - slack), branchLimit(ULLONG_MAX)
 {
+    for (size_t i = 0; i < ThreadNumber; ++i) {
+        branchCounter[i] = 0;
+    }
     srand(time(NULL));
     paths.reserve(5000);
 }
@@ -780,6 +788,9 @@ void Network::findPatternTruePath(size_t pid) {
 }
 
 void Network::branchAndBoundOnePath(size_t pid, Path &path) {
+    mutex.lock();
+    cout << ++pathCounter << endl;
+    mutex.unlock();
     ModifyList modifyList;
     path.PISequence.front()->arrival_time[pid] = 0;
     if (!path.isFind[0]) {
@@ -790,6 +801,7 @@ void Network::branchAndBoundOnePath(size_t pid, Path &path) {
         branchAndBound(pid, path, ++path.PISequence.begin());
         resetLastStatusWithModifyList(pid, modifyList);
         modifyList.clear();
+        branchCounter[pid] = 0;
     }
     if (!path.isFind[1]) {
         path.PISequence.front()->value[pid] = 1;
@@ -798,6 +810,7 @@ void Network::branchAndBoundOnePath(size_t pid, Path &path) {
         }
         branchAndBound(pid, path, ++path.PISequence.begin());
         resetLastStatusWithModifyList(pid, modifyList);
+        branchCounter[pid] = 0;
     }
     path.PISequence.front()->value[pid] = -1;
     path.PISequence.front()->arrival_time[pid] = -1;
@@ -872,10 +885,13 @@ void Network::forwardSimulation(size_t pid , Gate* current, ModifyList &modifyLi
 
 // if find trupath => 1; bound => 0; default => -1
 int Network::branchAndBound(size_t pid, Path &path, GateList::iterator pos) {
+    ++branchCounter[pid];
     ModifyList modifyList;
     int type = path.front()->value[pid];
     int bound = -1;
     if (path.isFind[type])
+        return 1;
+    if (branchCounter[pid] > branchLimit)
         return 1;
     if (pos == path.PISequence.end()) {
         if (!path.isFind[type] && isTruePath(pid, path) == 1) {
@@ -996,7 +1012,7 @@ void Network::backwardImplication(Path &path, Gate *cur) {
                 path.criticList.push_back({cur->fan_in.front(), !cur->criticalValue});
                 backwardImplication( path , cur->fan_in.front() );
             }
-            forwardImplication( path, cur );
+            // forwardImplication( path, cur );
         }
     }
     else if ( cur->type == NAND || cur->type == NOR ){
@@ -1056,10 +1072,11 @@ void Network::backwardImplication(Path &path, Gate *cur) {
                 }
             }
         }
-        forwardImplication( path, cur );
+        // forwardImplication( path, cur );
     }
     else if ( cur->type == INPUT ){
-         forwardImplication( path, cur );
+        ;
+        //  forwardImplication( path, cur );
     }
 }
 

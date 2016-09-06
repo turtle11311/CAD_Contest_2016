@@ -60,8 +60,11 @@ class Network{
     Gate end;
     char *module_exp, *inputs_exp, *outputs_exp, *wires_exp;
     std::string moduleName;
+    int truePathCounter;
     int pathCounter;
     unsigned int minimun;
+    unsigned long long branchLimit;
+    unsigned long long branchCounter[ThreadNumber];
     GateMap gatePool;
     GateMap wirePool;
     GateList evalSequence;
