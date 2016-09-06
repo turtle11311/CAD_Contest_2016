@@ -25,6 +25,13 @@ using std::move;
 
 static std::mutex mutex;
 
+void addPIPortToPISequence(Path &path, Gate* gate) {
+    if (gate->type == INPUT) {
+        path.PISequence.push_back(gate);
+        gate->hasTrav = true;
+    }
+}
+
 std::ostream &operator<<(std::ostream &out, const Gate &gate) {
     out << "Gate name: " << gate.name << endl;
     out << "Gate type: "
@@ -403,7 +410,6 @@ void Network::findAllPath() {
             if (path.back()->fan_out_it == path.back()->fan_out.end()) {
                 if (path.back()->type == OUTPUT) {
                     if (path.size() - 2ul > minimun) {
-                        IOMap[path.back()].insert(path.front());
                         paths.push_back(new Path(path));
                     }
                 }
@@ -415,24 +421,6 @@ void Network::findAllPath() {
             }
         }
     }
-}
-
-void Network::printIOMap(){
-    cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-    for (auto map_it = IOMap.begin(); map_it != IOMap.end(); ++map_it) {
-        cout << "PO's name: " << map_it->first->name << endl;
-        for ( GateSet::iterator set_it = map_it->second.begin();
-                set_it != map_it->second.end() ; ++set_it ){
-            cout << (*set_it)->name << ", ";
-        }
-        cout << endl;
-    }
-    cout << "~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-}
-
-void Network::printAllPaths() {
-    for (Path* path : paths)
-        printContainer(*path), cout << endl;
 }
 
 // Generate a sequence for evaluate network value without START GATE
@@ -645,6 +633,13 @@ void Network::genPISequence(Path &path) {
         }
         me = *it;
     }
+    for (auto it = path.criticList.begin(); it != path.criticList.end();) {
+        if (it->first->type == INPUT) {
+            path.criticList.insert(path.criticList.begin(), *it);
+            it = path.criticList.erase(it);
+        }
+        ++it;
+    }
     // reset criticalValue
     for (auto gate : path.criticList) {
         gate.first->criticalValue = -1;
@@ -661,32 +656,13 @@ void Network::genAllPISequence() {
         genPISequence(*path);
     }
     std::sort(paths.begin(), paths.end(), [](const Path *a, const Path *b)
-    { return a->PISequence.size() < b->PISequence.size(); });
-}
-
-// test to print all the gate value
-void Network::test2PrintGateValue(size_t pid) {
-    cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
-    for (auto &eachGate : gatePool) {
-        cout << eachGate.first << endl;
-        cout << "value: " << eachGate.second->value[pid] << endl;
-        cout << "time: " << eachGate.second->arrival_time[pid] << endl;
-        cout << "First in: " << "(" << eachGate.second->first_in << ")" << endl;
-        cout << "Last in: " << "(" << eachGate.second->last_in << ")" << endl;
-    }
-    cout << "~~~~~~~~~~~~~~~~~~~~~~\n";
-}
-
-// return the last arrival fan_in, if anyone is unready return NULL
-Gate* Network::isReady(size_t pid, Gate* out) {
-    Gate* temp = out->fan_in.front();
-    for (GateList::iterator it = out->fan_in.begin(); it != out->fan_in.end(); ++it){
-        if ((*it)->arrival_time[pid] == -1)
-            return NULL;
-        if (temp->arrival_time[pid] < (*it)->arrival_time[pid])
-            temp = (*it);
-    }
-    return temp;
+    { if (a->PISequence.size() < b->PISequence.size())
+          return true;
+      else if (a->PISequence.size() > b->PISequence.size())
+          return false;
+      else
+          return a->criticList.size() < b->criticList.size();
+    });
 }
 
 // evaluate first/last in
@@ -1076,7 +1052,7 @@ void Network::backwardImplication(Path &path, Gate *cur) {
         // forwardImplication( path, cur );
     }
     else if ( cur->type == INPUT ){
-        ;
+        addPIPortToPISequence(path, cur);
         //  forwardImplication( path, cur );
     }
 }
