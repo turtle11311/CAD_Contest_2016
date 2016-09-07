@@ -1,1 +1,8 @@
-# CAD_Contest_2016
+1. How to build this program
+type `make clean all`
+
+2. How to start program
+type `make run_caseX`
+
+3. How to modify our Makefile
+	bash -c "time ./$(TARGET) [Timing] [SlackConstraint] [inputFile] [OutputFile]"
