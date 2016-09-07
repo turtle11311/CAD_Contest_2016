@@ -10,8 +10,6 @@
 #include <iomanip>
 #include <iterator>
 #include <cstdio>
-using std::cout;
-using std::cin;
 using std::setw;
 using std::endl;
 using std::flush;
@@ -170,7 +168,6 @@ void Network::startFindTruePath() {
         if (PISize >= 60)
             branchLimit = PISize * 5;
         evalFLTime();
-        cout << "start PISeq" << endl;
         genAllPISequence();
         parallelBranchAndBound();
     }
@@ -765,9 +762,6 @@ void Network::findPatternTruePath(size_t pid) {
 }
 
 void Network::branchAndBoundOnePath(size_t pid, Path &path) {
-    mutex.lock();
-    cout << ++pathCounter << endl;
-    mutex.unlock();
     ModifyList modifyList;
     path.PISequence.front()->arrival_time[pid] = 0;
     if (!path.isFind[0]) {
