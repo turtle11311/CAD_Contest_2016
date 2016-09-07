@@ -161,7 +161,7 @@ void Network::startFindTruePath() {
         parallelExhaustiveMethod();
     } else {
         if (PISize >= 60)
-            branchLimit = 640;
+            branchLimit = PISize * 5;
         evalFLTime();
         cout << "start PISeq" << endl;
         genAllPISequence();
@@ -621,6 +621,8 @@ void Network::genPISequence(Path &path) {
                         me->criticalValue = (*it)->ctrlValue();
                         backwardImplication( path , me );
                         path.criticList.push_back({me, (*it)->ctrlValue()});
+                        path.isFind[count % 2 ? me->criticalValue : !me->criticalValue]
+                        = true;
                     }
                     else if (me->criticalValue != (*it)->ctrlValue()) {
                         path.isFind[0] = path.isFind[1] = true;
