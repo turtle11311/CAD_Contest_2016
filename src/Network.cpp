@@ -763,9 +763,10 @@ void Network::findPatternTruePath(size_t pid) {
 
 void Network::branchAndBoundOnePath(size_t pid, Path &path) {
     ModifyList modifyList;
-    path.PISequence.front()->arrival_time[pid] = 0;
-    if (!path.isFind[0]) {
-        path.PISequence.front()->value[pid] = 0;
+    short val = rand() % 2;
+    path.PISequence.front()->arrival_time[pid] = val;
+    if (!path.isFind[val]) {
+        path.PISequence.front()->value[pid] = val;
         for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
@@ -774,8 +775,9 @@ void Network::branchAndBoundOnePath(size_t pid, Path &path) {
         modifyList.clear();
         branchCounter[pid] = 0;
     }
-    if (!path.isFind[1]) {
-        path.PISequence.front()->value[pid] = 1;
+    val = !val;
+    if (!path.isFind[val]) {
+        path.PISequence.front()->value[pid] = val;
         for (Gate *nowPIFanOut : path.PISequence.front()->fan_out) {
             forwardSimulation(pid, nowPIFanOut, modifyList);
         }
